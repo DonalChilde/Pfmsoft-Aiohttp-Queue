@@ -1,0 +1,34 @@
+[
+  {
+    "average": 6.29,
+    "date": "2020-02-01",
+    "highest": 6.48,
+    "lowest": 6.24,
+    "order_count": 2175,
+    "volume": 5885496148
+  },
+  {
+    "average": 6.46,
+    "date": "2020-02-02",
+    "highest": 6.47,
+    "lowest": 6.24,
+    "order_count": 2375,
+    "volume": 7427198727
+  },
+  {
+    "average": 6.29,
+    "date": "2020-02-03",
+    "highest": 6.4,
+    "lowest": 5.89,
+    "order_count": 1921,
+    "volume": 8216531633
+  },
+  {
+    "average": 6.45,
+    "date": "2020-02-04",
+    "highest": 6.45,
+    "lowest": 6.44,
+    "order_count": 1952,
+    "volume": 8332152060
+  }
+]
