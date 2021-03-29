@@ -20,3 +20,4 @@ mypy
 doc8
 rstcheck
 pre-commit
+rich
