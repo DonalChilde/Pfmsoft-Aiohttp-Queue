@@ -31,7 +31,8 @@ Features
 Credits
 -------
 
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
+This package was created with Cookiecutter_ and the `donalchilde/cookiecutter-pypackage-click`_ project template, derived from the `audreyr/cookiecutter-pypackage`_ project template.
 
 .. _Cookiecutter: https://github.com/audreyr/cookiecutter
 .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+.. _`donalchilde/cookiecutter-pypackage-click`: https://github.com/donalchilde/cookiecutter-pypackage-click
