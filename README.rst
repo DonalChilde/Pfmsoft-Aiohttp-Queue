@@ -6,15 +6,19 @@ Pfmsoft-Aiohttp-Queue
 .. image:: https://img.shields.io/pypi/v/pfmsoft_aiohttp_queue.svg
         :target: https://pypi.python.org/pypi/pfmsoft_aiohttp_queue
 
-.. image:: https://img.shields.io/travis/DonalChilde/pfmsoft_aiohttp_queue.svg
-        :target: https://travis-ci.com/DonalChilde/pfmsoft_aiohttp_queue
+.. image:: https://travis-ci.com/DonalChilde/Pfmsoft-Aiohttp-Queue.svg?branch=master
+        :target: https://travis-ci.com/DonalChilde/Pfmsoft-Aiohttp-Queue.svg?branch=master
+        :alt: Master / Stable
+
+.. |travis-dev| image:: https://travis-ci.com/DonalChilde/Pfmsoft-Aiohttp-Queue.svg?branch=dev
+        :target: https://travis-ci.com/DonalChilde/Pfmsoft-Aiohttp-Queue.svg?branch=dev
+        :alt: dev / Latest
 
 .. image:: https://readthedocs.org/projects/pfmsoft-aiohttp-queue/badge/?version=latest
         :target: https://pfmsoft-aiohttp-queue.readthedocs.io/en/latest/?version=latest
         :alt: Documentation Status
 
-
-
+Latest:|travis-dev|
 
 A library to support aiohttp requests in a Queue, with callbacks for success, failure, or retry.
 
