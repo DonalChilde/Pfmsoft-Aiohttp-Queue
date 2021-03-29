@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../src"))
 
-import pfmsoft_aiohttp_queue
+import pfmsoft.aiohttp_queue
 
 # -- Project information -----------------------------------------------------
 
@@ -29,9 +29,9 @@ author = "Chad Lowe"
 # the built documents.
 #
 # The short X.Y version.
-version = pfmsoft_aiohttp_queue.__version__
+version = pfmsoft.aiohttp_queue.__version__
 # The full version, including alpha/beta/rc tags.
-release = pfmsoft_aiohttp_queue.__version__
+release = pfmsoft.aiohttp_queue.__version__
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
