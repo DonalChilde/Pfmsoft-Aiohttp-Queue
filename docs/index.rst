@@ -1,5 +1,5 @@
 Welcome to Pfmsoft-Aiohttp-Queue's documentation!
-======================================
+=================================================
 
 .. toctree::
    :maxdepth: 2
