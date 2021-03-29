@@ -1,3 +1,7 @@
+# App Specific
+.twine-secrets.env
+.twine-test-secrets.env
+
 
 # OSX useful to ignore
 *.DS_Store

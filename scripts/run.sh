@@ -55,6 +55,16 @@ function clean:test() { ## Clean test artifacts.
     rm -fr .mypy_cache
 }
 
+function _countdown() {
+    # https://superuser.com/questions/611538/is-there-a-way-to-display-a-countdown-or-stopwatch-timer-in-a-terminal
+    # countdown 5 to count down from 5 seconds
+    date1=$((`date +%s` + $1));
+    while [ "$date1" -ge `date +%s` ]; do
+        echo -ne "$(date -u --date @$(($date1 - `date +%s`)) +%H:%M:%S)\r";
+        sleep 0.1
+    done
+}
+
 function dist:build() { ## builds source and wheel package.
     clean:build
     python setup.py sdist
@@ -62,8 +72,44 @@ function dist:build() { ## builds source and wheel package.
 	ls -l dist
 }
 
-function dist:release() { ## package and upload a release.
-    twine upload dist/*
+function dist:release() { ## Upload a release to PyPi.
+    echo "Preparing to upload to PyPi."
+    echo "Did you:"
+    echo "\t- Check for the correct branch?"
+    echo "\t- Update the version number?"
+    echo "\t- Update the documentation?"
+    echo "\t- Run ALL THE TESTS?"
+    echo "\t- Update the changelog?"
+    echo "\t- Build a fresh dist/?"
+    echo
+    echo "Take ten seconds to be sure:"
+    _countdown 10
+    # https://stackoverflow.com/a/1885534/105844
+    read -p "Are you sure? (Y/N)" -n 1 -r
+    echo    # (optional) move to a new line
+    if [[ $REPLY =~ ^[Yy]$ ]]
+    then
+        twine check dist/*
+        source ./.twine-secrets.env
+        twine upload dist/*
+    fi
+
+}
+
+function dist:test:release() { ## Upload a release to TestPyPi.
+    echo "Uploading to TestPyPi"
+    echo "Take ten seconds to be sure:"
+    _countdown 10
+    # https://stackoverflow.com/a/1885534/105844
+    read -p "Are you sure? (Y/N)" -n 1 -r
+    echo    # (optional) move to a new line
+    if [[ $REPLY =~ ^[Yy]$ ]]
+    then
+        source ./.twine-test-secrets.env
+        twine check dist/*
+        twine upload --repository testpypi dist/*
+    fi
+
 }
 
 function docs:build() { ## Build documentation.
