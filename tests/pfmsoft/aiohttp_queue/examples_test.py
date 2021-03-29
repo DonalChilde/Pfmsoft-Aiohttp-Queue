@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 import pytest
 from aiohttp.client import ClientSession
+from rich import inspect
 
 from pfmsoft.aiohttp_queue import (
     ActionCallbacks,
@@ -15,8 +16,6 @@ from pfmsoft.aiohttp_queue import (
     AiohttpQueueWorkerFactory,
 )
 from pfmsoft.aiohttp_queue.callbacks import ResponseContentToJson
-
-# from rich import inspect, print
 
 
 @pytest.mark.asyncio
@@ -96,7 +95,7 @@ def test_run_a_queue_of_tasks():
     assert len(action_2.result) > 5
 
 
-def test_run_a_list_of_tasks():
+def test_run_a_list_of_tasks(logger):
     """Actions are performed sequentially.
 
     Not really making use of async/await,

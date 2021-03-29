@@ -9,7 +9,7 @@ from aiohttp import ClientSession
 
 from pfmsoft.aiohttp_queue import AiohttpAction, AiohttpQueueWorkerFactory
 
-logger = logging.getLogger("pfmsoft.aiohttp_queue")
+logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 

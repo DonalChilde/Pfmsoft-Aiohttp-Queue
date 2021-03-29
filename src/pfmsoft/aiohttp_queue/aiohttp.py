@@ -8,7 +8,7 @@ from aiohttp import ClientResponse, ClientSession
 
 from pfmsoft.aiohttp_queue.utilities import optional_object
 
-logger = logging.getLogger("pfmsoft.aiohttp_queue")
+logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
@@ -17,7 +17,6 @@ HTTP_STATUS_CODES_TO_RETRY = [500, 502, 503, 504]
 
 class AiohttpQueueWorkerFactory:
     def __init__(self) -> None:
-        logger.debug("creating worker factory")
         pass
 
     def get_worker(self, queue: Queue, session: ClientSession):

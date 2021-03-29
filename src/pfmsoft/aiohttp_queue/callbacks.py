@@ -8,8 +8,9 @@ from aiohttp.client_reqrep import ClientResponse
 
 from pfmsoft.aiohttp_queue import AiohttpAction, AiohttpActionCallback
 
-logger = logging.getLogger("pfmsoft.aiohttp_queue")
+logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
 
 # pylint: disable=[useless-super-delegation,no-self-use]
 

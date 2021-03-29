@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, Optional, Sequence, TypeVar, Union
 
 from aiohttp import ClientResponse
 
-logger = logging.getLogger("pfmsoft.aiohttp_queue")
+logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 

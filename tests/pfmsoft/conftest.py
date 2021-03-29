@@ -6,6 +6,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 import pytest
+from rich import inspect
 
 APP_LOG_LEVEL = logging.INFO
 
@@ -36,7 +37,9 @@ def _logger(test_log_path):
     # async_logger = logging.getLogger("eve_esi_jobs")
     # async_logger.addHandler(file_handler)
     aiohttp_queue_logger = logging.getLogger("pfmsoft.aiohttp_queue")
+    aiohttp_queue_logger.setLevel(logging.DEBUG)
     aiohttp_queue_logger.addHandler(file_handler)
+    logger.info("Logging output of pfmsoft.aiohttp_queue")
     return logger
 
 

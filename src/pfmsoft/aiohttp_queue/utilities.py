@@ -1,8 +1,9 @@
 import logging
 from typing import Callable, TypeVar, Union
 
-logger = logging.getLogger("pfmsoft.aiohttp_queue")
+logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
 
 T = TypeVar("T")  # pylint: disable=invalid-name
 
