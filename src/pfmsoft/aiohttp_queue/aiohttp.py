@@ -6,10 +6,10 @@ from typing import Any, Dict, List, Optional
 
 from aiohttp import ClientResponse, ClientSession
 
-from pfmsoft.aiohttp_queue import LOGGER
 from pfmsoft.aiohttp_queue.utilities import optional_object
 
-logger = LOGGER
+logger = logging.getLogger("pfmsoft.aiohttp_queue")
+logger.addHandler(logging.NullHandler())
 
 
 HTTP_STATUS_CODES_TO_RETRY = [500, 502, 503, 504]
@@ -24,7 +24,7 @@ class AiohttpQueueWorkerFactory:
         async def consumer(queue):
             while True:
                 action: AiohttpAction = await queue.get()
-                await action.do_action(queue, session)
+                await action.do_action(session, queue)
                 queue.task_done()
 
         worker = consumer(queue)

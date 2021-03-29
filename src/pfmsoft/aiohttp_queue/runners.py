@@ -7,9 +7,10 @@ from typing import Sequence
 
 from aiohttp import ClientSession
 
-from pfmsoft.aiohttp_queue import LOGGER, AiohttpAction, AiohttpQueueWorkerFactory
+from pfmsoft.aiohttp_queue import AiohttpAction, AiohttpQueueWorkerFactory
 
-logger = LOGGER
+logger = logging.getLogger("pfmsoft.aiohttp_queue")
+logger.addHandler(logging.NullHandler())
 
 
 def do_action_runner(

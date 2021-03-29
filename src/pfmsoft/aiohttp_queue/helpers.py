@@ -7,9 +7,8 @@ from typing import Any, Callable, Dict, Optional, Sequence, TypeVar, Union
 
 from aiohttp import ClientResponse
 
-from pfmsoft.aiohttp_queue import LOGGER
-
-logger = LOGGER
+logger = logging.getLogger("pfmsoft.aiohttp_queue")
+logger.addHandler(logging.NullHandler())
 
 
 def response_to_json(response: Optional[ClientResponse]) -> Dict:

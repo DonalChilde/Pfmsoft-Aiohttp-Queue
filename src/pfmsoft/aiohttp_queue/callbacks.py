@@ -6,9 +6,10 @@ from typing import Any, Dict, Optional
 import aiofiles
 from aiohttp.client_reqrep import ClientResponse
 
-from pfmsoft.aiohttp_queue import LOGGER, AiohttpAction, AiohttpActionCallback
+from pfmsoft.aiohttp_queue import AiohttpAction, AiohttpActionCallback
 
-logger = LOGGER
+logger = logging.getLogger("pfmsoft.aiohttp_queue")
+logger.addHandler(logging.NullHandler())
 
 # pylint: disable=[useless-super-delegation,no-self-use]
 
