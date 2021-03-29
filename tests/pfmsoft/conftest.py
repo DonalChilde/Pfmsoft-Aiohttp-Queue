@@ -35,6 +35,8 @@ def _logger(test_log_path):
     ############################################################
     # async_logger = logging.getLogger("eve_esi_jobs")
     # async_logger.addHandler(file_handler)
+    aiohttp_queue_logger = logging.getLogger("pfmsoft.aiohttp_queue")
+    aiohttp_queue_logger.addHandler(file_handler)
     return logger
 
 
