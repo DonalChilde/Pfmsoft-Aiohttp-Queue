@@ -14,8 +14,8 @@ from pfmsoft.aiohttp_queue import (
     AiohttpAction,
     AiohttpQueueWorkerFactory,
 )
-from pfmsoft.aiohttp_queue.callbacks import ResultToJson
-from pfmsoft.aiohttp_queue.helpers import do_aiohttp_action_queue
+from pfmsoft.aiohttp_queue.callbacks import ResponseContentToJson
+from pfmsoft.aiohttp_queue.runners import do_queue_runner
 
 # from rich import inspect, print
 

@@ -14,7 +14,7 @@ from pfmsoft.aiohttp_queue import (
     AiohttpAction,
     AiohttpQueueWorkerFactory,
 )
-from pfmsoft.aiohttp_queue.callbacks import ResultToJson
+from pfmsoft.aiohttp_queue.callbacks import ResponseContentToJson
 
 # from rich import inspect, print
 
@@ -173,7 +173,7 @@ def market_history_action(region_id, type_id) -> AiohttpAction:
     url_parameters = {"region_id": region_id}
     params = {"datasource": "tranquility", "type_id": type_id}
     request_kwargs = {"params": params}
-    callbacks: ActionCallbacks = ActionCallbacks(success=[ResultToJson()])
+    callbacks: ActionCallbacks = ActionCallbacks(success=[ResponseContentToJson()])
     action = make_get_action(
         route=route,
         url_parameters=url_parameters,
