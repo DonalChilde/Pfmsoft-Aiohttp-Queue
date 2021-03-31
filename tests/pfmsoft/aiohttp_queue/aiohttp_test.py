@@ -27,8 +27,8 @@ def test_response_to_json():
     action = test_action.action
     do_action_runner(actions=[action])
     assert action.response.status == 200
-    response_meta = action.response_to_json()
-    assert action.url in response_meta["url"]
+    response_meta = action.response_meta_to_json()
+    assert action.url in response_meta["request_info"]["url"]
     assert action.result["args"] == test_action.context["params"]
 
 
