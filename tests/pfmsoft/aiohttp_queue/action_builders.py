@@ -26,7 +26,7 @@ def get_with_response_json() -> TestAction:
     )
     params: Dict = {"arg1": "argument 1", "arg2": "argument 2"}
     request_qwargs = {"params": params}
-    test_action = aiohttp_queue.AiohttpAction(
+    action = aiohttp_queue.AiohttpAction(
         "get",
         url_template=url_template,
         url_parameters=url_parameters,
@@ -36,7 +36,7 @@ def get_with_response_json() -> TestAction:
         callbacks=callbacks,
     )
     test_action = TestAction(
-        test_action,
+        action,
         {
             "url_template": url_template,
             "url_parameters": url_parameters,
