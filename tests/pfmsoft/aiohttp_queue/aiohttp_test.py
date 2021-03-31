@@ -8,6 +8,8 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 import pytest
 from aiohttp.client import ClientSession
+from rich import inspect
+from tests.pfmsoft.aiohttp_queue import action_builders
 
 from pfmsoft.aiohttp_queue import (
     ActionCallbacks,
@@ -15,9 +17,19 @@ from pfmsoft.aiohttp_queue import (
     AiohttpQueueWorkerFactory,
 )
 from pfmsoft.aiohttp_queue.callbacks import ResponseContentToJson
-from pfmsoft.aiohttp_queue.runners import do_queue_runner
+from pfmsoft.aiohttp_queue.runners import do_action_runner, do_queue_runner
 
 # from rich import inspect, print
+
+
+def test_response_to_json():
+    test_action = action_builders.get_with_response_json()
+    action = test_action.action
+    do_action_runner(actions=[action])
+    assert action.response.status == 200
+    response_meta = action.response_to_json()
+    assert action.url in response_meta["url"]
+    assert action.result["args"] == test_action.context["params"]
 
 
 # from eve_esi_jobs.pfmsoft.util.async_actions.aiohttp import (

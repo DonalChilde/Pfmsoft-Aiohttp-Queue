@@ -123,30 +123,30 @@ class SaveJsonResultToFile(SaveResultToFile):
         return json_data
 
 
-class ResponseMetaToJson(AiohttpActionCallback):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+# class ResponseMetaToJson(AiohttpActionCallback):
+#     def __init__(self, *args, **kwargs) -> None:
+#         super().__init__(*args, **kwargs)
 
-    async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
-        response_info = self.response_to_json(caller)
-        caller.context["pfmsoft"]["response_info"] = response_info
+#     async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
+#         response_info = self.response_to_json(caller)
+#         caller.context["pfmsoft"]["response_info"] = response_info
 
-    def response_to_json(self, caller: AiohttpAction) -> Dict:
-        response: Optional[ClientResponse] = caller.response
-        data: Dict[str, Any] = {}
-        if response is None:
-            data = {"error": "response to json called before response recieved."}
-            return data
-        info = response.request_info
-        request_headers = [{key: value} for key, value in info.headers.items()]
-        response_headers = [{key: value} for key, value in response.headers.items()]
-        data["version"] = response.version
-        data["status"] = response.status
-        data["reason"] = response.reason
-        data["method"] = info.method
-        data["url"] = str(info.url)
-        data["real_url"] = str(info.real_url)
-        data["cookies"] = response.cookies
-        data["request_headers"] = request_headers
-        data["response_headers"] = response_headers
-        return data
+#     def response_to_json(self, caller: AiohttpAction) -> Dict:
+#         response: Optional[ClientResponse] = caller.response
+#         data: Dict[str, Any] = {}
+#         if response is None:
+#             data = {"error": "response to json called before response recieved."}
+#             return data
+#         info = response.request_info
+#         request_headers = [{key: value} for key, value in info.headers.items()]
+#         response_headers = [{key: value} for key, value in response.headers.items()]
+#         data["version"] = response.version
+#         data["status"] = response.status
+#         data["reason"] = response.reason
+#         data["method"] = info.method
+#         data["url"] = str(info.url)
+#         data["real_url"] = str(info.real_url)
+#         data["cookies"] = response.cookies
+#         data["request_headers"] = request_headers
+#         data["response_headers"] = response_headers
+#         return data

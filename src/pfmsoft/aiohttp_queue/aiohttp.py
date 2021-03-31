@@ -127,3 +127,24 @@ class AiohttpAction:
             logger.error(
                 "Checked response before response recieved. This should not be possible."
             )
+
+    def response_to_json(self) -> Optional[Dict[str, Any]]:
+        data: Dict[str, Any] = {}
+        if self.response is None:
+            return None
+        request_headers = [
+            {key: value} for key, value in self.response.request_info.headers.items()
+        ]
+        response_headers = [
+            {key: value} for key, value in self.response.headers.items()
+        ]
+        data["version"] = self.response.version
+        data["status"] = self.response.status
+        data["reason"] = self.response.reason
+        data["method"] = self.response.request_info.method
+        data["url"] = str(self.response.request_info.url)
+        data["real_url"] = str(self.response.request_info.real_url)
+        data["cookies"] = self.response.cookies
+        data["request_headers"] = request_headers
+        data["response_headers"] = response_headers
+        return data
