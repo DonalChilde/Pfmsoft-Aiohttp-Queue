@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, TypeVar, Union
+from typing import Callable, Dict, Optional, Sequence, TypeVar, Union
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -59,6 +59,16 @@ def optional_object(
     if argument is None:
         return object_factory(*args, **kwargs)
     return argument
+
+
+def combine_dictionaries(base_dict: dict, overrides: Optional[Sequence[Dict]]) -> Dict:
+    # TODO move this to collection util - NB makes a new dict with optional overrides
+    combined_dict: Dict = {}
+    combined_dict.update(base_dict)
+    if overrides is not None:
+        for override in overrides:
+            combined_dict.update(override)
+    return combined_dict
 
 
 # class SomeObject:
