@@ -135,7 +135,7 @@ class SaveJsonResultToFile(SaveResultToFile):
         file_path: Path,
         mode: str = "w",
         template_params: Optional[Dict[str, str]] = None,
-        file_ending: str = "json",
+        file_ending: str = ".json",
     ) -> None:
         super().__init__(
             file_path,
@@ -162,7 +162,7 @@ class SaveListOfDictResultToCSVFile(SaveResultToFile):
         file_path: Path,
         mode: str = "w",
         template_params: Optional[Dict[str, str]] = None,
-        file_ending: str = "csv",
+        file_ending: str = ".csv",
         field_names: Optional[List[str]] = None,
         additional_fields: Dict = None,
     ) -> None:

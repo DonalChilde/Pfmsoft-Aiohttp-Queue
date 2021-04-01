@@ -75,12 +75,12 @@ function dist:build() { ## builds source and wheel package.
 function dist:release() { ## Upload a release to PyPi.
     echo "Preparing to upload to PyPi."
     echo "Did you:"
-    echo "\t- Check for the correct branch?"
-    echo "\t- Update the version number?"
-    echo "\t- Update the documentation?"
-    echo "\t- Run ALL THE TESTS?"
-    echo "\t- Update the changelog?"
-    echo "\t- Build a fresh dist/?"
+    echo "    - Check for the correct branch?"
+    echo "    - Update the version number?"
+    echo "    - Update the documentation?"
+    echo "    - Run ALL THE TESTS?"
+    echo "    - Update the changelog?"
+    echo "    - Build a fresh dist/?"
     echo
     echo "Take ten seconds to be sure:"
     _countdown 10
