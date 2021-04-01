@@ -2,6 +2,12 @@
 History
 =======
 
+0.1.2 (2021-04-01)
+------------------
+
+* added option to process file path as a string.Template, with provided arguments, to file saving callbacks.
+* added SaveListOfDictResultToCSVFile callback.
+
 0.1.1 (2021-03-29)
 ------------------
 
