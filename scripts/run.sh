@@ -80,6 +80,7 @@ function dist:release() { ## Upload a release to PyPi.
     echo "    - Update the documentation?"
     echo "    - Run ALL THE TESTS?"
     echo "    - Update the changelog?"
+    echo "    - Tag it on GitHub?"
     echo "    - Build a fresh dist/?"
     echo
     echo "Take ten seconds to be sure:"
