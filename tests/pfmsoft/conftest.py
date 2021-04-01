@@ -62,7 +62,7 @@ def test_app_data_dir_(tmp_path_factory):
 def example_resource(logger: logging.Logger) -> dict:
     """Load a resource file from a package directory."""
     try:
-        resource_path: str = "tests.pfmsoft_aiohttp_queue.resources"
+        resource_path: str = "tests.pfmsoft.aiohttp_queue.resources"
         resource_name: str = "example.json"
         with resources.open_text(resource_path, resource_name) as data_file:
             data = json.load(data_file)
@@ -78,18 +78,18 @@ def example_resource(logger: logging.Logger) -> dict:
         raise ex
 
 
-@pytest.fixture(autouse=True)
-def env_setup(monkeypatch, test_app_data_dir):
-    """environment variables set for each test."""
-    monkeypatch.setenv(
-        "pfmsoft_aiohttp_queue_TESTING",
-        "True",
-    )
-    monkeypatch.setenv(
-        "pfmsoft_aiohttp_queue_LOG_LEVEL",
-        str(APP_LOG_LEVEL),
-    )
-    monkeypatch.setenv(
-        "pfmsoft_aiohttp_queue_APP_DIR",
-        str(test_app_data_dir),
-    )
+# @pytest.fixture(autouse=True)
+# def env_setup(monkeypatch, test_app_data_dir):
+#     """environment variables set for each test."""
+#     monkeypatch.setenv(
+#         "pfmsoft_aiohttp_queue_TESTING",
+#         "True",
+#     )
+#     monkeypatch.setenv(
+#         "pfmsoft_aiohttp_queue_LOG_LEVEL",
+#         str(APP_LOG_LEVEL),
+#     )
+#     monkeypatch.setenv(
+#         "pfmsoft_aiohttp_queue_APP_DIR",
+#         str(test_app_data_dir),
+#     )

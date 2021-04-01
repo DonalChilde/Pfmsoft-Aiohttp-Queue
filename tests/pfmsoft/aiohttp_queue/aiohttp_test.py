@@ -1,8 +1,10 @@
 import asyncio
+import json
 import logging
 import random
 import time
 from asyncio.queues import Queue
+from pathlib import Path
 from time import perf_counter_ns
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
@@ -23,13 +25,82 @@ from pfmsoft.aiohttp_queue.runners import do_action_runner, do_queue_runner
 
 
 def test_response_to_json():
-    test_action = action_builders.get_with_response_json()
+    params = {"arg1": "argument 1", "arg2": "argument 2"}
+    test_action = action_builders.get_with_response_json(params)
     action = test_action.action
     do_action_runner(actions=[action])
     assert action.response.status == 200
     response_meta = action.response_meta_to_json()
     assert action.url in response_meta["request_info"]["url"]
     assert action.result["args"] == test_action.context["params"]
+
+
+def test_response_to_string():
+    params = {"arg1": "argument 1", "arg2": "argument 2"}
+    test_action = action_builders.get_with_response_text(params)
+    action = test_action.action
+    do_action_runner(actions=[action])
+    assert action.response.status == 200
+    response_meta = action.response_meta_to_json()
+    assert action.url in response_meta["request_info"]["url"]
+    assert test_action.context["params"]["arg1"] in action.result
+    json_result = json.loads(action.result)
+    assert json_result["args"] == test_action.context["params"]
+
+
+def test_text_result_to_file(test_app_data_dir):
+    file_path: Path = test_app_data_dir / Path("text_result_to_file.txt")
+    params = {"arg1": "argument 1", "arg2": "argument 2"}
+    test_action = action_builders.save_txt_to_file(params, file_path)
+    action = test_action.action
+    do_action_runner(actions=[action])
+    assert action.response.status == 200
+    print(file_path)
+    assert file_path.is_file()
+    assert file_path.stat().st_size > 10
+
+
+def test_list_of_dicts_result():
+    url_params = {"region_id": 10000002}
+    params = {"type_id": 34}
+    test_action = action_builders.get_list_of_dicts_result(
+        url_params=url_params, params=params
+    )
+    action = test_action.action
+    do_action_runner(actions=[action])
+    assert action.response.status == 200
+    assert isinstance(action.result, list)
+    assert isinstance(action.result[0], dict)
+
+
+def test_save_list_of_dicts_to_csv(test_app_data_dir):
+    url_params = {"region_id": 10000002}
+    params = {"type_id": 34}
+    file_path: Path = test_app_data_dir / Path("test_save_list_of_dicts_to_csv.csv")
+    test_action = action_builders.save_list_of_dicts_to_csv_file(
+        url_params=url_params, params=params, file_path=file_path
+    )
+    action = test_action.action
+    do_action_runner(actions=[action])
+    assert action.response.status == 200
+    print(file_path)
+    assert file_path.is_file()
+    assert file_path.stat().st_size > 10
+
+
+def test_save_json_to_file(test_app_data_dir):
+    file_path: Path = test_app_data_dir / Path("test_save_json_to_file.json")
+    params = {"arg1": "argument 1", "arg2": "argument 2"}
+    test_action = action_builders.save_json_to_file(params, file_path)
+    action = test_action.action
+    do_action_runner(actions=[action])
+    assert action.response.status == 200
+    print(file_path)
+    assert file_path.is_file()
+    assert file_path.stat().st_size > 10
+    with open(file_path) as file:
+        data = json.load(file)
+        assert data == action.result
 
 
 # from eve_esi_jobs.pfmsoft.util.async_actions.aiohttp import (
