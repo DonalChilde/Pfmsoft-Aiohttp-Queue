@@ -69,35 +69,29 @@ class LogRetry(AiohttpActionCallback):
 
 
 class CheckForPages(AiohttpActionCallback):
-    """Where page=<page number> is in query string, and x-pages is in response header."""
+    """Where page=<page number> is in query string, and x-pages is in response header.
+
+    Assumes response data is a list
+    """
 
     def __init__(self) -> None:
         super().__init__()
 
     async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
-        """
-        - check for pages
-        - copy action, with new page request,
-        - add to list of child actions? use context variable?
-        - add action to queue
-
-        [extended_summary]
-
-        :param caller: [description]
-        :type caller: AiohttpAction
-        """
-        await self.collect_all_pages(caller, *args, **kwargs)
-
-    async def collect_all_pages(self, caller: AiohttpAction, *args, **kwargs):
-        _, _ = args, kwargs
+        """"""
+        if caller.response is None:
+            return
         page_count = self.check_for_pages(caller, *args, **kwargs)
         if page_count is None:
+            logger.warning(
+                "No pages found for %s, Are you sure this api offers pages?",
+                caller.response.real_url,
+            )
             return
         actions = []
         for page_number in range(2, page_count + 1):
             actions.append(self.make_new_action(caller, page_number, *args, **kwargs))
         await self.process_actions(caller, actions, *args, **kwargs)
-
         caller.context["pfmsoft_page_report"] = self.build_report(
             caller, actions, *args, **kwargs
         )
@@ -180,8 +174,31 @@ class CheckForPages(AiohttpActionCallback):
         self, caller: AiohttpAction, actions: Sequence[AiohttpAction], *args, **kwargs
     ):
         _, _ = args, kwargs
+        if caller.response is None:
+            return
+        if not isinstance(caller.result, list):
+            logger.warning(
+                "Tried to append page data to a parent action with no result. url: %s uid: %s",
+                caller.response.real_url,
+                caller.uid,
+            )
+            return
         for action in actions:
-            caller.result.extend(action.result)
+            if action.response is None:
+                return
+
+            if action.response.status == 200:
+                caller.result.extend(action.result)
+                return
+            logger.warning(
+                (
+                    "An attempt to get page data for %s failed with "
+                    "status: %s and msg: %s. Data is incomplete."
+                ),
+                action.response.real_url,
+                action.response.status,
+                action.response.reason,
+            )
 
     def worker_count(
         self, caller: AiohttpAction, actions: Sequence[AiohttpAction], *args, **kwargs
