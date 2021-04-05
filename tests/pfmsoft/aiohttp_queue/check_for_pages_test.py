@@ -84,8 +84,12 @@ def test_check_for_pages(
     with_pages = completed_action_with_pages
     with_out_pages = completed_action_with_out_pages
     print(yaml.dump(with_pages.response_meta_to_json()))
-    assert int(with_pages.response.headers.get("x-pages", None)) > 1
+    assert with_pages.response is not None
+    assert with_out_pages.response is not None
+    assert with_pages.response.headers.get("x-pages", None) is not None
+    assert int(with_pages.response.headers.get("x-pages")) > 1
     assert with_out_pages.response.headers.get("x-pages", None) is None
+    assert callback.check_for_pages(with_pages) is not None
     assert callback.check_for_pages(with_pages) > 1
     assert callback.check_for_pages(with_out_pages) is None
 

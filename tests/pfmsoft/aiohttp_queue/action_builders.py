@@ -46,14 +46,14 @@ def get_with_response_json(params: Dict[str, str]) -> TestAction:
     return test_action
 
 
-def get_with_404() -> TestAction:
-    test_action = None
-    return test_action
+# def get_with_404() -> TestAction:
+#     test_action = None
+#     return test_action
 
 
-def get_with_501() -> TestAction:
-    test_action = None
-    return test_action
+# def get_with_501() -> TestAction:
+#     test_action = None
+#     return test_action
 
 
 def get_list_of_dicts_result(url_params: Dict, params: Dict) -> TestAction:

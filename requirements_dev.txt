@@ -21,3 +21,4 @@ doc8
 rstcheck
 pre-commit
 rich
+pyyaml
