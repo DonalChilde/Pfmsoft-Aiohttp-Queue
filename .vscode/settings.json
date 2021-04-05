@@ -19,5 +19,6 @@
     "insertDateString.format": "iso",
     "python.analysis.extraPaths": [
       "./src"
-    ]
+    ],
+    "restructuredtext.confPath": ""
   }

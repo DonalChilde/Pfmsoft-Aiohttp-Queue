@@ -2,6 +2,10 @@
 History
 =======
 
+0.1.4 (2021-04-05)
+------------------
+
+* added CheckForPages callback - If an action detects paged data, makes more actions to retieve that data and appends it to the parent action.result
 
 0.1.3 (2021-04-01)
 ------------------
