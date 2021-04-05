@@ -3,6 +3,7 @@ from asyncio.queues import Queue
 from dataclasses import dataclass, field
 from string import Template
 from typing import Any, Dict, List, Optional
+from uuid import UUID, uuid4
 
 from aiohttp import ClientResponse, ClientSession
 
@@ -54,16 +55,17 @@ class AiohttpAction:
         self,
         method: str,
         url_template: str,
-        url_parameters: Optional[dict] = None,
+        url_parameters: Optional[Dict] = None,
         retry_limit: int = 0,
-        context: Optional[dict] = None,
-        request_kwargs: Optional[dict] = None,
+        context: Optional[Dict] = None,
+        request_kwargs: Optional[Dict] = None,
         name: str = "",
         id_: Any = None,
         callbacks: Optional[ActionCallbacks] = None,
     ):
         self.name = name
         self.id_ = id_
+        self.uid: UUID = uuid4()
         self.callbacks: ActionCallbacks = optional_object(callbacks, ActionCallbacks)
         self.method = method
         self.url_template = url_template
