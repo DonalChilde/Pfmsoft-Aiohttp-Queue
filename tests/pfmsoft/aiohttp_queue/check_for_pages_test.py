@@ -112,4 +112,5 @@ def test_get_all_pages(logger):
     print(len(action.result))
     print(yaml.dump(action.context["pfmsoft_page_report"]))
     # print(action.context["pfmsoft_page_report"])
-    assert False
+    pages = AC.CheckForPages().check_for_pages(action)
+    assert pages == len(action.context["pfmsoft_page_report"])
