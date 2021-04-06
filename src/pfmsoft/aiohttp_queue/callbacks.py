@@ -1,14 +1,12 @@
 import csv
 import json
 import logging
-import re
 from copy import deepcopy
 from pathlib import Path
 from string import Template
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Dict, List, Optional, Sequence
 
 import aiofiles
-from aiohttp.client_reqrep import ClientResponse
 
 from pfmsoft.aiohttp_queue import (
     AiohttpAction,
@@ -214,20 +212,21 @@ class SaveResultToFile(AiohttpActionCallback):
         self,
         file_path: Path,
         mode: str = "w",
-        template_params: Optional[Dict[str, str]] = None,
+        path_values: Optional[Dict[str, str]] = None,
         file_ending: str = "",
     ) -> None:
         super().__init__()
         self.file_path = Path(file_path)
         self.mode = mode
-        self.template_params = optional_object(template_params, dict)
+        self.path_values = optional_object(path_values, dict)
         self.file_ending = file_ending
 
     def refine_path(self, caller: AiohttpAction, *args, **kwargs):
         """Refine the file path. Data from the AiohttpAction is available for use here."""
-        if self.template_params is not None:
+        _, _, _ = caller, args, kwargs
+        if self.path_values is not None:
             template = Template(str(self.file_path))
-            resolved_string = template.substitute(self.template_params)
+            resolved_string = template.substitute(self.path_values)
             self.file_path = Path(resolved_string)
         if self.file_ending != "":
             if self.file_path.suffix != self.file_ending:
@@ -263,13 +262,13 @@ class SaveJsonResultToFile(SaveResultToFile):
         self,
         file_path: Path,
         mode: str = "w",
-        template_params: Optional[Dict[str, str]] = None,
+        path_values: Optional[Dict[str, str]] = None,
         file_ending: str = ".json",
     ) -> None:
         super().__init__(
             file_path,
             mode=mode,
-            template_params=template_params,
+            path_values=path_values,
             file_ending=file_ending,
         )
 
@@ -290,7 +289,7 @@ class SaveListOfDictResultToCSVFile(SaveResultToFile):
         self,
         file_path: Path,
         mode: str = "w",
-        template_params: Optional[Dict[str, str]] = None,
+        path_values: Optional[Dict[str, str]] = None,
         file_ending: str = ".csv",
         field_names: Optional[List[str]] = None,
         additional_fields: Dict = None,
@@ -298,25 +297,11 @@ class SaveListOfDictResultToCSVFile(SaveResultToFile):
         super().__init__(
             file_path,
             mode=mode,
-            template_params=template_params,
+            path_values=path_values,
             file_ending=file_ending,
         )
         self.field_names = field_names
         self.additional_fields = additional_fields
-
-    # FIXME move this to Aiohttp-Queue
-    # def __init__(
-    #     self,
-    #     file_path: str,
-    #     mode: str = "w",
-    #     field_names: Optional[List[str]] = None,
-    #     additional_fields: Dict = None,
-    # ) -> None:
-    #     super().__init__()
-    #     self.file_path = Path(file_path)
-    #     self.mode = mode
-    #     self.field_names = field_names
-    #     self.additional_fields = additional_fields
 
     def refine_path(self, caller: AiohttpAction, *args, **kwargs):
         """Refine the file path. Data from the AiohttpAction is available for use here."""
@@ -353,32 +338,3 @@ class SaveListOfDictResultToCSVFile(SaveResultToFile):
                 "Exception saving file to %s in action %s", self.file_path, caller
             )
             raise ex
-
-
-# class ResponseMetaToJson(AiohttpActionCallback):
-#     def __init__(self, *args, **kwargs) -> None:
-#         super().__init__(*args, **kwargs)
-
-#     async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
-#         response_info = self.response_to_json(caller)
-#         caller.context["pfmsoft"]["response_info"] = response_info
-
-#     def response_to_json(self, caller: AiohttpAction) -> Dict:
-#         response: Optional[ClientResponse] = caller.response
-#         data: Dict[str, Any] = {}
-#         if response is None:
-#             data = {"error": "response to json called before response recieved."}
-#             return data
-#         info = response.request_info
-#         request_headers = [{key: value} for key, value in info.headers.items()]
-#         response_headers = [{key: value} for key, value in response.headers.items()]
-#         data["version"] = response.version
-#         data["status"] = response.status
-#         data["reason"] = response.reason
-#         data["method"] = info.method
-#         data["url"] = str(info.url)
-#         data["real_url"] = str(info.real_url)
-#         data["cookies"] = response.cookies
-#         data["request_headers"] = request_headers
-#         data["response_headers"] = response_headers
-#         return data

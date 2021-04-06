@@ -97,14 +97,14 @@ def save_list_of_dicts_to_csv_file(
     url_params: Dict[str, str],
     params: Dict[str, str],
     file_path: Path,
-    template_params: Optional[Dict] = None,
+    path_values: Optional[Dict] = None,
     file_ending: str = ".csv",
 ):
     test_action = get_list_of_dicts_result(url_params, params)
     test_action.action.callbacks.success.append(
         AQ_callbacks.SaveListOfDictResultToCSVFile(
             file_path=file_path,
-            template_params=template_params,
+            path_values=path_values,
             file_ending=file_ending,
         )
     )
@@ -114,7 +114,7 @@ def save_list_of_dicts_to_csv_file(
 def save_txt_to_file(
     params: Dict[str, str],
     file_path: Path,
-    template_params: Optional[Dict] = None,
+    path_values: Optional[Dict] = None,
     file_ending: str = "",
 ) -> TestAction:
 
@@ -122,7 +122,7 @@ def save_txt_to_file(
     test_action.action.callbacks.success.append(
         AQ_callbacks.SaveResultToFile(
             file_path=file_path,
-            template_params=template_params,
+            path_values=path_values,
             file_ending=file_ending,
         )
     )
@@ -132,14 +132,14 @@ def save_txt_to_file(
 def save_json_to_file(
     params: Dict[str, str],
     file_path: Path,
-    template_params: Optional[Dict] = None,
+    path_values: Optional[Dict] = None,
     file_ending: str = ".json",
 ) -> TestAction:
     test_action = get_with_response_json(params)
     test_action.action.callbacks.success.append(
         AQ_callbacks.SaveJsonResultToFile(
             file_path=file_path,
-            template_params=template_params,
+            path_values=path_values,
             file_ending=file_ending,
         )
     )
