@@ -2,6 +2,11 @@
 History
 =======
 
+0.1.6 (2021-04-06)
+------------------
+
+* changed file callback template args name to path_values
+
 0.1.5 (2021-04-05)
 ------------------
 
