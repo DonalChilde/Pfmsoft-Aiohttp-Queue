@@ -8,7 +8,7 @@ History
 * ADD repr to all classes
 * ADD logging to action success, retry, fail
 * CHANGE drop log callbacks as redundant
-* FIXED csv callback to respecting path templates
+* FIXED csv callback not respecting path templates
 
 
 0.1.6 (2021-04-06)
