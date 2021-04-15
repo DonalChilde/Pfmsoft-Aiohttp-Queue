@@ -7,6 +7,7 @@ from string import Template
 from typing import Dict, List, Optional, Sequence
 
 import aiofiles
+from more_itertools import spy
 
 from pfmsoft.aiohttp_queue import (
     AiohttpAction,
@@ -42,28 +43,28 @@ class ResponseContentToText(AiohttpActionCallback):
             caller.result = await caller.response.text()
 
 
-class LogSuccess(AiohttpActionCallback):
-    def __init__(self) -> None:
-        super().__init__()
+# class LogSuccess(AiohttpActionCallback):
+#     def __init__(self) -> None:
+#         super().__init__()
 
-    async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
-        logger.info("Success: %s", caller)
-
-
-class LogFail(AiohttpActionCallback):
-    def __init__(self) -> None:
-        super().__init__()
-
-    async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
-        logger.warning("Fail: %s", caller)
+#     async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
+#         logger.info("Success: %s", caller)
 
 
-class LogRetry(AiohttpActionCallback):
-    def __init__(self) -> None:
-        super().__init__()
+# class LogFail(AiohttpActionCallback):
+#     def __init__(self) -> None:
+#         super().__init__()
 
-    async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
-        logger.info("Retry: %s", caller)
+#     async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
+#         logger.warning("Fail: %s", caller)
+
+
+# class LogRetry(AiohttpActionCallback):
+#     def __init__(self) -> None:
+#         super().__init__()
+
+#     async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
+#         logger.info("Retry: %s", caller)
 
 
 class CheckForPages(AiohttpActionCallback):
@@ -86,6 +87,7 @@ class CheckForPages(AiohttpActionCallback):
                 caller.response.real_url,
             )
             return
+        logger.info("Found %s pages for %s", page_count, caller)
         actions = []
         for page_number in range(2, page_count + 1):
             actions.append(self.make_new_action(caller, page_number, *args, **kwargs))
@@ -130,7 +132,6 @@ class CheckForPages(AiohttpActionCallback):
             pages = response.headers.get("x-pages", None)
             if pages is not None:
                 page_int = int(pages)
-                logger.info("%s pages reported for action.uid:%s", pages, caller.uid)
                 return page_int
         return None
 
@@ -151,12 +152,12 @@ class CheckForPages(AiohttpActionCallback):
         params = new_action.request_kwargs.get("params", {})
         params["page"] = new_page
         new_action.request_kwargs["params"] = params
-        logger.info(
-            "%s made action.uid=%s to get page %s of action.uid=%s",
+        logger.debug(
+            "%s made %r to get page %s of %r",
             self.__class__.__name__,
-            new_action.uid,
+            new_action,
             new_page,
-            caller.uid,
+            caller,
         )
         return new_action
 
@@ -190,8 +191,8 @@ class CheckForPages(AiohttpActionCallback):
                 return
             logger.warning(
                 (
-                    "An attempt to get page data for %s failed with "
-                    "status: %s and msg: %s. Data is incomplete."
+                    "An attempt to get page data failed. Data is incomplete.\nUrl: %r \n"
+                    "response: %s - %s"
                 ),
                 action.response.real_url,
                 action.response.status,
@@ -220,6 +221,14 @@ class SaveResultToFile(AiohttpActionCallback):
         self.mode = mode
         self.path_values = optional_object(path_values, dict)
         self.file_ending = file_ending
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"file_path={self.file_path!r}, mode={self.mode!r}, "
+            f"path_values={self.path_values!r}, file_ending={self.file_ending!r}, "
+            ")"
+        )
 
     def refine_path(self, caller: AiohttpAction, *args, **kwargs):
         """Refine the file path. Data from the AiohttpAction is available for use here."""
@@ -303,14 +312,22 @@ class SaveListOfDictResultToCSVFile(SaveResultToFile):
         self.field_names = field_names
         self.additional_fields = additional_fields
 
-    def refine_path(self, caller: AiohttpAction, *args, **kwargs):
-        """Refine the file path. Data from the AiohttpAction is available for use here."""
-        # pass
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"file_path={self.file_path!r}, mode={self.mode!r}, "
+            f"path_values={self.path_values!r}, file_ending={self.file_ending!r}, "
+            f"field_names={self.field_names!r}, additional_fields={self.additional_fields!r}, "
+            ")"
+        )
+
+    # def refine_path(self, caller: AiohttpAction, *args, **kwargs):
+    #     """Refine the file path. Data from the AiohttpAction is available for use here."""
+    #     # pass
 
     def get_data(self, caller: AiohttpAction, *args, **kwargs) -> List[Dict]:  # type: ignore
         """expects caller.result to be a List[Dict]."""
-        _ = args
-        _ = kwargs
+        _, _ = args, kwargs
         data = caller.result
         if self.additional_fields is not None:
             combined_data = []
@@ -327,7 +344,9 @@ class SaveListOfDictResultToCSVFile(SaveResultToFile):
             self.file_path.parent.mkdir(parents=True, exist_ok=True)
             data = self.get_data(caller, args, kwargs)
             if self.field_names is None:
-                self.field_names = list(data[0].keys())
+                first, data_iter = spy(data)
+                self.field_names = list(first[0].keys())
+                data = data_iter
             with open(str(self.file_path), mode=self.mode) as file:
                 writer = csv.DictWriter(file, fieldnames=self.field_names)
                 writer.writeheader()

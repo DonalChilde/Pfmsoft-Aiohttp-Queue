@@ -24,6 +24,16 @@ from pfmsoft.aiohttp_queue.runners import do_action_runner, do_queue_runner
 # from rich import inspect, print
 
 
+def test_action_repr():
+    params = {"arg1": "argument 1", "arg2": "argument 2"}
+    test_action = action_builders.get_with_response_json(params)
+    action = test_action.action
+    print(action.__repr__())
+    print(action)
+    assert "params" in action.__repr__()
+    # assert False
+
+
 def test_response_to_json():
     params = {"arg1": "argument 1", "arg2": "argument 2"}
     test_action = action_builders.get_with_response_json(params)
@@ -74,6 +84,7 @@ def test_list_of_dicts_result():
 
 
 def test_save_list_of_dicts_to_csv(test_app_data_dir):
+    # TODO verify all elements are output to csv, eg. json count == csv count
     url_params = {"region_id": 10000002}
     params = {"type_id": 34}
     file_path: Path = test_app_data_dir / Path("test_save_list_of_dicts_to_csv.csv")

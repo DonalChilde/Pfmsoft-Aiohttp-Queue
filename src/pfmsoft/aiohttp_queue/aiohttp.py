@@ -78,33 +78,90 @@ class AiohttpAction:
         self.request_kwargs = optional_object(request_kwargs, dict)
         self.context = optional_object(context, dict)
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"method={self.method!r}, url_template={self.url_template!r}, "
+            f"url_parameters={self.url_parameters!r}, retry_limit={self.retry_limit!r}, "
+            f"context={self.context!r}, request_kwargs={self.request_kwargs!r}, "
+            f"name={self.name!r}, id_={self.id_!r}, callbacks={self.callbacks!r}"
+            ")"
+        )
+
+    def __str__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"method={self.method!r}, url={self.url!r}, "
+            f"request_kwargs={self.request_kwargs!r}"
+            ")"
+        )
+
     async def success(self, *args, **kwargs):
+        logger.debug("Successful response for %s", self)
+
         for callback in self.callbacks.success:
-            await callback.do_callback(caller=self, *args, **kwargs)
+            try:
+                await callback.do_callback(caller=self, *args, **kwargs)
+            except Exception as ex:
+                logger.exception(
+                    "Exception: %s during success callback: %s for action: %s",
+                    ex.__class__.__name__,
+                    callback,
+                    self,
+                )
+                raise ex
 
     async def fail(self, *args, **kwargs):
-
+        logger.warning(
+            "Fail response for %r meta: %r", self, self.response_meta_to_json
+        )
         for callback in self.callbacks.fail:
-            await callback.do_callback(caller=self, *args, **kwargs)
+            try:
+                await callback.do_callback(caller=self, *args, **kwargs)
+            except Exception as ex:
+                logger.exception(
+                    "Exception: %s during fail callback: %s for action: %s",
+                    ex.__class__.__name__,
+                    callback,
+                    self,
+                )
+                raise ex
 
     async def retry(self, *args, **kwargs):
-
+        logger.info(
+            "Retrying %s retry_count=%s, retry_limit=%s",
+            self,
+            self.retry_count,
+            self.retry_limit,
+        )
         for callback in self.callbacks.retry:
-            await callback.do_callback(caller=self, *args, **kwargs)
+            try:
+                await callback.do_callback(caller=self, *args, **kwargs)
+            except Exception as ex:
+                logger.exception(
+                    "Exception: %s during retry callback: %s for action: %s",
+                    ex.__class__.__name__,
+                    callback,
+                    self,
+                )
+                raise ex
 
     async def do_action(self, session: ClientSession, queue: Optional[Queue] = None):
         try:
-            if self.retry_count <= self.retry_limit:
+            if self.retry_count <= self.retry_limit or self.retry_limit == -1:
                 async with session.request(
                     self.method, self.url, **self.request_kwargs
                 ) as response:
                     self.response = response
                     await self.check_response(queue)
             else:
+                logger.warning("Retry fail: %r retry_count:%s", self, self.retry_count)
                 await self.fail()
         except Exception as ex:
             logger.exception(
-                "Exception raised while doing action: %s \nthe message was %s", self, ex
+                "Exception: %s raised while doing action: %s",
+                ex.__class__.__name__,
+                self,
             )
             raise ex
 

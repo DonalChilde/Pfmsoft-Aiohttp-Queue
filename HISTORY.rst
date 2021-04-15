@@ -2,6 +2,14 @@
 History
 =======
 
+0.1.7 (2021-04-15)
+------------------
+
+* ADD repr to all classes
+* ADD logging to action success, retry, fail
+* CHANGE drop log callbacks as redundant
+
+
 0.1.6 (2021-04-06)
 ------------------
 

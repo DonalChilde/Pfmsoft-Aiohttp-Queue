@@ -79,7 +79,6 @@ def build_get_test_action(name, url_template, url_parameters, params, callbacks)
         url_parameters=url_parameters,
         request_kwargs=request_qwargs,
         name=name,
-        id_=uuid4(),
         callbacks=callbacks,
     )
     test_action = TestAction(
