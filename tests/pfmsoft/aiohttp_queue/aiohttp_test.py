@@ -13,11 +13,7 @@ from aiohttp.client import ClientSession
 from rich import inspect
 from tests.pfmsoft.aiohttp_queue import action_builders
 
-from pfmsoft.aiohttp_queue import (
-    ActionCallbacks,
-    AiohttpAction,
-    AiohttpQueueWorkerFactory,
-)
+from pfmsoft.aiohttp_queue import ActionCallbacks, AiohttpAction, AiohttpQueueWorker
 from pfmsoft.aiohttp_queue.callbacks import ResponseContentToJson
 from pfmsoft.aiohttp_queue.runners import do_action_runner, do_queue_runner
 

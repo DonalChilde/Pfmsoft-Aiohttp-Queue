@@ -12,7 +12,7 @@ from more_itertools import spy
 from pfmsoft.aiohttp_queue import (
     AiohttpAction,
     AiohttpActionCallback,
-    AiohttpQueueWorkerFactory,
+    AiohttpQueueWorker,
 )
 from pfmsoft.aiohttp_queue.aiohttp import ActionCallbacks
 from pfmsoft.aiohttp_queue.runners import queue_runner
@@ -32,6 +32,8 @@ class ResponseContentToJson(AiohttpActionCallback):
     async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
         if caller.response is not None:
             caller.result = await caller.response.json()
+            self.callback_success(caller)
+        self.callback_fail(caller, "Response is None.")
 
 
 class ResponseContentToText(AiohttpActionCallback):
@@ -41,30 +43,8 @@ class ResponseContentToText(AiohttpActionCallback):
     async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
         if caller.response is not None:
             caller.result = await caller.response.text()
-
-
-# class LogSuccess(AiohttpActionCallback):
-#     def __init__(self) -> None:
-#         super().__init__()
-
-#     async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
-#         logger.info("Success: %s", caller)
-
-
-# class LogFail(AiohttpActionCallback):
-#     def __init__(self) -> None:
-#         super().__init__()
-
-#     async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
-#         logger.warning("Fail: %s", caller)
-
-
-# class LogRetry(AiohttpActionCallback):
-#     def __init__(self) -> None:
-#         super().__init__()
-
-#     async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
-#         logger.info("Retry: %s", caller)
+            self.callback_success(caller)
+        self.callback_fail(caller, "Response is None.")
 
 
 class CheckForPages(AiohttpActionCallback):
@@ -86,6 +66,9 @@ class CheckForPages(AiohttpActionCallback):
                 "No pages found for %s, Are you sure this api offers pages?",
                 caller.response.real_url,
             )
+            self.callback_fail(
+                caller, "No pages found, Are you sure this api offers pages?"
+            )
             return
         logger.info("Found %s pages for %s", page_count, caller)
         actions = []
@@ -96,6 +79,7 @@ class CheckForPages(AiohttpActionCallback):
             caller, actions, *args, **kwargs
         )
         self.handle_results(caller, actions, *args, **kwargs)
+        self.callback_success(caller)
 
     def build_report(
         self, caller: AiohttpAction, actions: Sequence[AiohttpAction], *args, **kwargs
@@ -143,11 +127,12 @@ class CheckForPages(AiohttpActionCallback):
             method=caller.method,
             url_template=caller.url_template,
             url_parameters=deepcopy(caller.url_parameters),
-            retry_limit=caller.retry_limit,
+            max_attempts=caller.max_attempts,
             request_kwargs=deepcopy(caller.request_kwargs),
             name=str(caller.uid),
             id_=new_page,
             callbacks=ActionCallbacks(success=[ResponseContentToJson()]),
+            observers=caller.observers,
         )
         params = new_action.request_kwargs.get("params", {})
         params["page"] = new_page
@@ -165,8 +150,8 @@ class CheckForPages(AiohttpActionCallback):
         self, caller: AiohttpAction, actions: Sequence[AiohttpAction], *args, **kwargs
     ):
         _, _ = args, kwargs
-        factory_count = self.worker_count(caller, actions, *args, **kwargs)
-        factories = [AiohttpQueueWorkerFactory() for _ in range(factory_count)]
+        worker_count = self.worker_count(caller, actions, *args, **kwargs)
+        factories = [AiohttpQueueWorker() for _ in range(worker_count)]
         await queue_runner(actions, factories)
 
     def handle_results(
@@ -257,10 +242,12 @@ class SaveResultToFile(AiohttpActionCallback):
             ) as file:  # type:ignore
                 data = self.get_data(caller, args, kwargs)
                 await file.write(data)
+                self.callback_success(caller)
         except Exception as ex:
             logger.exception(
                 "Exception saving file to %s in action %s", self.file_path, caller
             )
+            self.callback_fail(caller, f"Exception saving file to {self.file_path}")
             raise ex
 
 
@@ -352,8 +339,10 @@ class SaveListOfDictResultToCSVFile(SaveResultToFile):
                 writer.writeheader()
                 for item in data:
                     writer.writerow(item)
+            self.callback_success(caller)
         except Exception as ex:
             logger.exception(
                 "Exception saving file to %s in action %s", self.file_path, caller
             )
+            self.callback_fail(caller, f"Exception saving file to {self.file_path}")
             raise ex

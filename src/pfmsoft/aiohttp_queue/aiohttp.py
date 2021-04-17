@@ -1,8 +1,9 @@
 import logging
 from asyncio.queues import Queue
 from dataclasses import dataclass, field
+from enum import Enum
 from string import Template
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional, Sequence
 from uuid import UUID, uuid4
 
 from aiohttp import ClientResponse, ClientSession
@@ -16,27 +17,78 @@ logger.addHandler(logging.NullHandler())
 HTTP_STATUS_CODES_TO_RETRY = [500, 502, 503, 504]
 
 
-class AiohttpQueueWorkerFactory:
+# class AiohttpQueueWorkerFactory:
+#     def __init__(self) -> None:
+#         self.worker_count = 0
+
+#     def get_worker(self, queue: Queue, session: ClientSession):
+#         async def consumer(queue):
+#             while True:
+#                 action: AiohttpAction = await queue.get()
+#                 await action.do_action(session, queue)
+#                 queue.task_done()
+
+#         worker = consumer(queue)
+#         return worker
+
+
+class AiohttpQueueWorker:
     def __init__(self) -> None:
-        pass
+        self.uid = uuid4()
+        self.task_count = 0
 
-    def get_worker(self, queue: Queue, session: ClientSession):
-        async def consumer(queue):
-            while True:
-                action: AiohttpAction = await queue.get()
+    async def consumer(self, queue: Queue, session: ClientSession):
+        while True:
+            action: AiohttpAction = await queue.get()
+            try:
+                self.task_count += 1
                 await action.do_action(session, queue)
-                queue.task_done()
+            except Exception as ex:
+                logger.exception(
+                    "Queue worker %s caught an exception from %r", self.uid, action
+                )
+            queue.task_done()
 
-        worker = consumer(queue)
-        return worker
+
+class CallbackState(Enum):
+    NOT_SET = "not_set"
+    SUCCESS = "success"
+    FAIL = "fail"
 
 
 class AiohttpActionCallback:
     def __init__(self, *args, **kwargs) -> None:
+        _, _ = args, kwargs
+        self.state: CallbackState = CallbackState.NOT_SET
+        self.state_message: str = ""
+
+    def callback_success(self, caller: "AiohttpAction", msg: str = "", **kwargs):
+        _, _ = caller, kwargs
+        self.state = CallbackState.SUCCESS
+        self.state_message = msg
+
+    def callback_fail(self, caller: "AiohttpAction", msg: str, **kwargs):
+        _ = kwargs
+        self.state = CallbackState.FAIL
+        self.state_message = msg
+        caller.update_state(ActionState.CALLBACK_FAIL, self)
+
+    async def do_callback(self, caller: "AiohttpAction"):
+        raise NotImplementedError()
+
+
+class ActionObserver:
+    def __init__(self) -> None:
         pass
 
-    async def do_callback(self, caller: "AiohttpAction", *args, **kwargs):
-        raise NotImplementedError()
+    def update(
+        self,
+        action: "AiohttpAction",
+        callback: Optional[AiohttpActionCallback] = None,
+        **kwargs,
+    ):
+        _, _ = callback, kwargs
+        print(action)
 
 
 @dataclass
@@ -44,6 +96,14 @@ class ActionCallbacks:
     success: List[AiohttpActionCallback] = field(default_factory=list)
     retry: List[AiohttpActionCallback] = field(default_factory=list)
     fail: List[AiohttpActionCallback] = field(default_factory=list)
+
+
+class ActionState(Enum):
+    NOT_SET = "not_set"
+    SUCCESS = "success"
+    RETRY = "retry"
+    FAIL = "fail"
+    CALLBACK_FAIL = "callback_fail"
 
 
 class AiohttpAction:
@@ -56,12 +116,13 @@ class AiohttpAction:
         method: str,
         url_template: str,
         url_parameters: Optional[Dict] = None,
-        retry_limit: int = 0,
+        max_attempts: int = 1,
         context: Optional[Dict] = None,
         request_kwargs: Optional[Dict] = None,
         name: str = "",
         id_: Any = None,
         callbacks: Optional[ActionCallbacks] = None,
+        observers: Optional[List[ActionObserver]] = None,
     ):
         self.name = name
         self.id_ = id_
@@ -71,32 +132,54 @@ class AiohttpAction:
         self.url_template = url_template
         self.url_parameters: Dict = optional_object(url_parameters, dict)
         self.url = Template(url_template).substitute(self.url_parameters)
-        self.retry_limit = retry_limit
+        self.max_attempts = max_attempts
         self.response: Optional[ClientResponse] = None
-        self.retry_count: int = 0
+        self.attempts: int = 0
         self.result: Any = None
         self.request_kwargs = optional_object(request_kwargs, dict)
         self.context = optional_object(context, dict)
+        self.observers = optional_object(observers, list)
+        self.state: ActionState = ActionState.NOT_SET
 
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}("
             f"method={self.method!r}, url_template={self.url_template!r}, "
-            f"url_parameters={self.url_parameters!r}, retry_limit={self.retry_limit!r}, "
+            f"url_parameters={self.url_parameters!r}, retry_limit={self.max_attempts!r}, "
             f"context={self.context!r}, request_kwargs={self.request_kwargs!r}, "
-            f"name={self.name!r}, id_={self.id_!r}, callbacks={self.callbacks!r}"
+            f"name={self.name!r}, id_={self.id_!r}, callbacks={self.callbacks!r}, "
+            f"observers={self.observers!r}"
             ")"
         )
 
     def __str__(self) -> str:
         return (
             f"{self.__class__.__name__}("
+            f"state={self.state}, "
             f"method={self.method!r}, url={self.url!r}, "
             f"request_kwargs={self.request_kwargs!r}"
             ")"
         )
 
+    def _update(
+        self,
+        callback: Optional[AiohttpActionCallback] = None,
+        **kwargs,
+    ):
+        for observer in self.observers:
+            observer.update(self, callback, **kwargs)
+
+    def update_state(
+        self,
+        state: ActionState,
+        callback: Optional[AiohttpActionCallback] = None,
+        **kwargs,
+    ):
+        self.state = state
+        self._update(callback, **kwargs)
+
     async def success(self, *args, **kwargs):
+        self.update_state(ActionState.SUCCESS)
         logger.debug("Successful response for %s", self)
 
         for callback in self.callbacks.success:
@@ -112,6 +195,7 @@ class AiohttpAction:
                 raise ex
 
     async def fail(self, *args, **kwargs):
+        self.update_state(ActionState.FAIL)
         logger.warning(
             "Fail response for %r meta: %r", self, self.response_meta_to_json
         )
@@ -128,12 +212,7 @@ class AiohttpAction:
                 raise ex
 
     async def retry(self, *args, **kwargs):
-        logger.info(
-            "Retrying %s retry_count=%s, retry_limit=%s",
-            self,
-            self.retry_count,
-            self.retry_limit,
-        )
+        self.update_state(ActionState.RETRY)
         for callback in self.callbacks.retry:
             try:
                 await callback.do_callback(caller=self, *args, **kwargs)
@@ -147,15 +226,16 @@ class AiohttpAction:
                 raise ex
 
     async def do_action(self, session: ClientSession, queue: Optional[Queue] = None):
+        self.attempts += 1
         try:
-            if self.retry_count <= self.retry_limit or self.retry_limit == -1:
+            if self.attempts <= self.max_attempts or self.max_attempts == -1:
                 async with session.request(
                     self.method, self.url, **self.request_kwargs
                 ) as response:
                     self.response = response
                     await self.check_response(queue)
             else:
-                logger.warning("Retry fail: %r retry_count:%s", self, self.retry_count)
+                logger.warning("Retry fail: %r retry_count:%s", self, self.attempts)
                 await self.fail()
         except Exception as ex:
             logger.exception(
@@ -166,11 +246,18 @@ class AiohttpAction:
             raise ex
 
     async def check_response(self, queue: Optional[Queue]):
+        # FIXME split to class, handle more codes
         if self.response is not None:
             if self.response.status == 200:
                 await self.success()
             elif self.response.status in HTTP_STATUS_CODES_TO_RETRY:
-                self.retry_count += 1
+                # self.retry_count += 1
+                logger.info(
+                    "Retrying %s retry_count=%s, retry_limit=%s",
+                    self,
+                    self.attempts,
+                    self.max_attempts,
+                )
                 if queue is not None:
                     await queue.put(self)
                     await self.retry()

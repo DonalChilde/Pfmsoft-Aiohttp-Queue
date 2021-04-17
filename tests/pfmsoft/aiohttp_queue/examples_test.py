@@ -10,11 +10,7 @@ import pytest
 from aiohttp.client import ClientSession
 from rich import inspect
 
-from pfmsoft.aiohttp_queue import (
-    ActionCallbacks,
-    AiohttpAction,
-    AiohttpQueueWorkerFactory,
-)
+from pfmsoft.aiohttp_queue import ActionCallbacks, AiohttpAction, AiohttpQueueWorker
 from pfmsoft.aiohttp_queue.callbacks import ResponseContentToJson
 
 
@@ -26,7 +22,7 @@ async def test_aiohttp_action(logger):
     method: str = "get"
     url_parameters: Dict = {"region_id": 10000002}
     context: Dict = {}
-    retries: int = 1
+    max_attempts: int = 1
     request_kwargs: Dict = {"params": {"type_id": 34}}
     name: str = ""
     id_: str = ""
@@ -35,7 +31,7 @@ async def test_aiohttp_action(logger):
         method,
         url_template,
         url_parameters=url_parameters,
-        retry_limit=retries,
+        max_attempts=max_attempts,
         context=context,
         request_kwargs=request_kwargs,
         name=name,
@@ -43,13 +39,13 @@ async def test_aiohttp_action(logger):
         callbacks=callbacks,
     )
     actions = [action]
-    worker_factories = [AiohttpQueueWorkerFactory()]
+    workers = [AiohttpQueueWorker()]
     queue = Queue()
     async with ClientSession() as session:
         worker_tasks = []
-        for factory in worker_factories:
+        for worker in workers:
             worker_task: asyncio.Task = asyncio.create_task(
-                factory.get_worker(queue, session)
+                worker.consumer(queue, session)
             )
             worker_tasks.append(worker_task)
         for item in actions:
@@ -87,8 +83,8 @@ def test_run_a_queue_of_tasks():
     action_1 = market_history_action(10000002, 34)
     action_2 = market_history_action(10000002, 36)
     actions = [action_1, action_2]
-    worker_factories = [AiohttpQueueWorkerFactory(), AiohttpQueueWorkerFactory()]
-    asyncio.run(example_queue_runner(actions, worker_factories))
+    workers = [AiohttpQueueWorker(), AiohttpQueueWorker()]
+    asyncio.run(example_queue_runner(actions, workers))
     assert action_1.response.status == 200
     assert len(action_1.result) > 5
     assert action_2.response.status == 200
@@ -133,7 +129,7 @@ async def example_action_runner(
 
 async def example_queue_runner(
     actions: Sequence[AiohttpAction],
-    worker_factories: Sequence[AiohttpQueueWorkerFactory],
+    workers: Sequence[AiohttpQueueWorker],
     session_kwargs=None,
 ):
     """A coroutine that puts the actions, workers and the queue together.
@@ -146,9 +142,9 @@ async def example_queue_runner(
     queue: Queue = Queue()
     async with ClientSession(**session_kwargs) as session:
         worker_tasks = []
-        for factory in worker_factories:
+        for worker in workers:
             worker_task: asyncio.Task = asyncio.create_task(
-                factory.get_worker(queue, session)
+                worker.consumer(queue, session)
             )
             worker_tasks.append(worker_task)
         for action in actions:

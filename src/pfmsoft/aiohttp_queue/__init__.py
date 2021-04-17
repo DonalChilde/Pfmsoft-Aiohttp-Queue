@@ -2,9 +2,11 @@
 
 from pfmsoft.aiohttp_queue.aiohttp import (
     ActionCallbacks,
+    ActionObserver,
+    ActionState,
     AiohttpAction,
     AiohttpActionCallback,
-    AiohttpQueueWorkerFactory,
+    AiohttpQueueWorker,
 )
 
 __author__ = """Chad Lowe"""
