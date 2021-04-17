@@ -33,6 +33,7 @@ class ResponseContentToJson(AiohttpActionCallback):
         if caller.response is not None:
             caller.result = await caller.response.json()
             self.callback_success(caller)
+            return
         self.callback_fail(caller, "Response is None.")
 
 
@@ -44,6 +45,7 @@ class ResponseContentToText(AiohttpActionCallback):
         if caller.response is not None:
             caller.result = await caller.response.text()
             self.callback_success(caller)
+            return
         self.callback_fail(caller, "Response is None.")
 
 
