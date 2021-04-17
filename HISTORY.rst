@@ -2,6 +2,16 @@
 History
 =======
 
+0.1.8 (2021-04-17)
+------------------
+
+* ADD add state and state message to callbacks, to allow more useful failure notifications.
+* ADD add state to AiohttpAction
+* ADD add observers to AiohttpAction, updated when action state is changed
+* CHANGE retry_limit to max_atttempts
+* CHANGE Simplify worker, add some stat reporting (log)
+
+
 0.1.7 (2021-04-15)
 ------------------
 
