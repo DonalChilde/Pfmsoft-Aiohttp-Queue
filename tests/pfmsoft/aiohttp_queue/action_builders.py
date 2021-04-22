@@ -1,11 +1,12 @@
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
+from string import Template
 from typing import Any, Dict, Optional
-from uuid import UUID, uuid4
 
 from pfmsoft import aiohttp_queue
 from pfmsoft.aiohttp_queue import callbacks as AQ_callbacks
+from pfmsoft.aiohttp_queue.aiohttp import AiohttpAction, AiohttpRequest
 
 
 @dataclass
@@ -14,17 +15,15 @@ class TestAction:
     context: Dict = field(default_factory=dict)
 
 
-def get_with_500_code(params: Dict[str, Any]) -> TestAction:
-    url_template = "https://httpbin.org/status/500"
-    url_params = None
+def get_with_500_code(params: Dict[str, Any]) -> AiohttpAction:
+    url = "https://httpbin.org/status/500"
     callbacks = aiohttp_queue.ActionCallbacks(
         success=[AQ_callbacks.ResponseContentToText()]
     )
 
     test_action = build_get_test_action(
-        "get_with_response_text",
-        url_template=url_template,
-        url_parameters=url_params,
+        "get_with_500_code",
+        url=url,
         params=params,
         callbacks=callbacks,
         max_attempts=3,
@@ -32,53 +31,52 @@ def get_with_500_code(params: Dict[str, Any]) -> TestAction:
     return test_action
 
 
-def get_with_response_text(params: Dict[str, Any]) -> TestAction:
-    url_template = "https://httpbin.org/get"
-    url_params = None
+def get_with_response_text(params: Dict[str, Any]) -> AiohttpAction:
+    url = "https://httpbin.org/get"
     callbacks = aiohttp_queue.ActionCallbacks(
         success=[AQ_callbacks.ResponseContentToText()]
     )
 
     test_action = build_get_test_action(
         "get_with_response_text",
-        url_template=url_template,
-        url_parameters=url_params,
+        url=url,
         params=params,
         callbacks=callbacks,
+        max_attempts=3,
     )
     return test_action
 
 
-def get_with_response_json(params: Dict[str, Any]) -> TestAction:
+def get_with_response_json(params: Dict[str, Any]) -> AiohttpAction:
 
-    url_template = "https://httpbin.org/get"
-    url_params = None
+    url = "https://httpbin.org/get"
     callbacks = aiohttp_queue.ActionCallbacks(
         success=[AQ_callbacks.ResponseContentToJson()]
     )
     test_action = build_get_test_action(
         "get_with_response_json",
-        url_template=url_template,
-        url_parameters=url_params,
+        url=url,
         params=params,
         callbacks=callbacks,
+        max_attempts=3,
     )
     return test_action
 
 
-def get_with_response_json_delay(params: Dict[str, Any], max_delay: int) -> TestAction:
+def get_with_response_json_delay(
+    params: Dict[str, Any], max_delay: int
+) -> AiohttpAction:
     delay = random.randint(0, max_delay)
-    url_template = f"https://httpbin.org/delay/{delay}"
-    url_params = None
+    url = f"https://httpbin.org/delay/{delay}"
     callbacks = aiohttp_queue.ActionCallbacks(
         success=[AQ_callbacks.ResponseContentToJson()]
     )
     test_action = build_get_test_action(
         "get_with_response_json",
-        url_template=url_template,
-        url_parameters=url_params,
+        url=url,
         params=params,
         callbacks=callbacks,
+        max_attempts=3,
     )
     return test_action
 
@@ -93,43 +91,41 @@ def get_with_response_json_delay(params: Dict[str, Any], max_delay: int) -> Test
 #     return test_action
 
 
-def get_list_of_dicts_result(url_params: Dict, params: Dict) -> TestAction:
-    url_template = "https://esi.evetech.net/latest/markets/${region_id}/history"
+def get_list_of_dicts_result(url_params: Dict, params: Dict) -> AiohttpAction:
+    url_template = Template(
+        "https://esi.evetech.net/latest/markets/${region_id}/history"
+    )
+    url = url_template.substitute(url_params)
     callbacks = aiohttp_queue.ActionCallbacks(
         success=[AQ_callbacks.ResponseContentToJson()]
     )
     test_action = build_get_test_action(
         "get_list_of_dicts_result",
-        url_template=url_template,
-        url_parameters=url_params,
+        url=url,
         params=params,
         callbacks=callbacks,
+        max_attempts=3,
     )
     return test_action
 
 
-def build_get_test_action(
-    name, url_template, url_parameters, params, callbacks, max_attempts=1
-):
-    request_qwargs = {"params": params}
+def build_get_test_action(name, url, params, callbacks, json=None, max_attempts=1):
+    aiohttp_request = AiohttpRequest(
+        method="get",
+        url=url,
+        params=params,
+        json=json,
+    )
+    context = {"params": params}
     action = aiohttp_queue.AiohttpAction(
-        "get",
-        url_template=url_template,
-        url_parameters=url_parameters,
-        request_kwargs=request_qwargs,
+        aiohttp_args=aiohttp_request,
         name=name,
         callbacks=callbacks,
         max_attempts=max_attempts,
+        context=context,
     )
-    test_action = TestAction(
-        action,
-        {
-            "url_template": url_template,
-            "url_parameters": url_parameters,
-            "params": params,
-        },
-    )
-    return test_action
+
+    return action
 
 
 def save_list_of_dicts_to_csv_file(
@@ -138,9 +134,9 @@ def save_list_of_dicts_to_csv_file(
     file_path: Path,
     path_values: Optional[Dict] = None,
     file_ending: str = ".csv",
-):
+) -> AiohttpAction:
     test_action = get_list_of_dicts_result(url_params, params)
-    test_action.action.callbacks.success.append(
+    test_action.callbacks.success.append(
         AQ_callbacks.SaveListOfDictResultToCSVFile(
             file_path=file_path,
             path_values=path_values,
@@ -155,11 +151,11 @@ def save_txt_to_file(
     file_path: Path,
     path_values: Optional[Dict] = None,
     file_ending: str = "",
-) -> TestAction:
+) -> AiohttpAction:
 
     test_action = get_with_response_text(params)
-    test_action.action.callbacks.success.append(
-        AQ_callbacks.SaveResultToFile(
+    test_action.callbacks.success.append(
+        AQ_callbacks.SaveResultToTxtFile(
             file_path=file_path,
             path_values=path_values,
             file_ending=file_ending,
@@ -173,10 +169,10 @@ def save_json_to_file(
     file_path: Path,
     path_values: Optional[Dict] = None,
     file_ending: str = ".json",
-) -> TestAction:
+) -> AiohttpAction:
     test_action = get_with_response_json(params)
-    test_action.action.callbacks.success.append(
-        AQ_callbacks.SaveJsonResultToFile(
+    test_action.callbacks.success.append(
+        AQ_callbacks.SaveResultToJsonFile(
             file_path=file_path,
             path_values=path_values,
             file_ending=file_ending,

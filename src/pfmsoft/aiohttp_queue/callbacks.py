@@ -7,6 +7,7 @@ from string import Template
 from typing import Dict, List, Optional, Sequence
 
 import aiofiles
+import yaml
 from more_itertools import spy
 
 from pfmsoft.aiohttp_queue import (
@@ -29,24 +30,30 @@ class ResponseContentToJson(AiohttpActionCallback):
     def __init__(self) -> None:
         super().__init__()
 
-    async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}()"
+
+    async def do_callback(self, caller: AiohttpAction):
         if caller.response is not None:
-            caller.result = await caller.response.json()
-            self.callback_success(caller)
+            caller.response_data = await caller.response.json()
+            self.success(caller)
             return
-        self.callback_fail(caller, "Response is None.")
+        self.fail(caller, "Response is None.")
 
 
 class ResponseContentToText(AiohttpActionCallback):
     def __init__(self) -> None:
         super().__init__()
 
-    async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}()"
+
+    async def do_callback(self, caller: AiohttpAction):
         if caller.response is not None:
-            caller.result = await caller.response.text()
-            self.callback_success(caller)
+            caller.response_data = await caller.response.text()
+            self.success(caller)
             return
-        self.callback_fail(caller, "Response is None.")
+        self.fail(caller, "Response is None.")
 
 
 class CheckForPages(AiohttpActionCallback):
@@ -58,35 +65,32 @@ class CheckForPages(AiohttpActionCallback):
     def __init__(self) -> None:
         super().__init__()
 
-    async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}()"
+
+    async def do_callback(self, caller: AiohttpAction):
         """"""
         if caller.response is None:
             return
-        page_count = self.check_for_pages(caller, *args, **kwargs)
+        page_count = self.check_for_pages(caller)
         if page_count is None:
             logger.warning(
                 "No pages found for %s, Are you sure this api offers pages?",
                 caller.response.real_url,
             )
-            self.callback_fail(
-                caller, "No pages found, Are you sure this api offers pages?"
-            )
+            self.fail(caller, "No pages found, Are you sure this api offers pages?")
             return
         logger.info("Found %s pages for %s", page_count, caller)
         actions = []
         for page_number in range(2, page_count + 1):
-            actions.append(self.make_new_action(caller, page_number, *args, **kwargs))
-        await self.process_actions(caller, actions, *args, **kwargs)
-        caller.context["pfmsoft_page_report"] = self.build_report(
-            caller, actions, *args, **kwargs
-        )
-        self.handle_results(caller, actions, *args, **kwargs)
-        self.callback_success(caller)
+            actions.append(self.make_new_action(caller, page_number))
+        await self.process_actions(caller, actions)
+        caller.context["pfmsoft_page_report"] = self.build_report(caller, actions)
+        self.handle_results(caller, actions)
+        self.success(caller)
 
-    def build_report(
-        self, caller: AiohttpAction, actions: Sequence[AiohttpAction], *args, **kwargs
-    ):
-        _, _ = args, kwargs
+    def build_report(self, caller: AiohttpAction, actions: Sequence[AiohttpAction]):
+
         caller_report = self.build_page_report(caller)
         reports = []
         reports.append(caller_report)
@@ -96,12 +100,13 @@ class CheckForPages(AiohttpActionCallback):
 
     def build_page_report(self, action: AiohttpAction):
         if action.response is not None:
-            params = action.request_kwargs.get("params", {})
+            params = action.aiohttp_args.params
+            assert params is not None
             page_num = int(params.get("page", "1"))
             if action.response.status != 200:
                 count = -1
             else:
-                count = len(action.result)
+                count = len(action.response_data)
             action_report = {
                 "uid": str(action.uid),
                 "page": page_num,
@@ -111,8 +116,8 @@ class CheckForPages(AiohttpActionCallback):
             return action_report
         return {}
 
-    def check_for_pages(self, caller: AiohttpAction, *args, **kwargs) -> Optional[int]:
-        _, _ = args, kwargs
+    def check_for_pages(self, caller: AiohttpAction) -> Optional[int]:
+
         response = caller.response
         if response is not None:
             pages = response.headers.get("x-pages", None)
@@ -121,24 +126,19 @@ class CheckForPages(AiohttpActionCallback):
                 return page_int
         return None
 
-    def make_new_action(
-        self, caller: AiohttpAction, new_page: int, *args, **kwargs
-    ) -> AiohttpAction:
-        _, _ = args, kwargs
+    def make_new_action(self, caller: AiohttpAction, new_page: int) -> AiohttpAction:
+
+        new_args = deepcopy(caller.aiohttp_args)
         new_action = AiohttpAction(
-            method=caller.method,
-            url_template=caller.url_template,
-            url_parameters=deepcopy(caller.url_parameters),
+            aiohttp_args=new_args,
             max_attempts=caller.max_attempts,
-            request_kwargs=deepcopy(caller.request_kwargs),
-            name=str(caller.uid),
-            id_=new_page,
+            id_=f"{caller.uid} - page: {new_page}",
             callbacks=ActionCallbacks(success=[ResponseContentToJson()]),
             observers=caller.observers,
+            retry_codes=caller.retry_codes,
         )
-        params = new_action.request_kwargs.get("params", {})
-        params["page"] = new_page
-        new_action.request_kwargs["params"] = params
+        assert new_action.aiohttp_args.params is not None
+        new_action.aiohttp_args.params["page"] = new_page
         logger.debug(
             "%s made %r to get page %s of %r",
             self.__class__.__name__,
@@ -149,20 +149,18 @@ class CheckForPages(AiohttpActionCallback):
         return new_action
 
     async def process_actions(
-        self, caller: AiohttpAction, actions: Sequence[AiohttpAction], *args, **kwargs
+        self, caller: AiohttpAction, actions: Sequence[AiohttpAction]
     ):
-        _, _ = args, kwargs
-        worker_count = self.worker_count(caller, actions, *args, **kwargs)
+
+        worker_count = self.worker_count(caller, actions)
         factories = [AiohttpQueueWorker() for _ in range(worker_count)]
         await queue_runner(actions, factories)
 
-    def handle_results(
-        self, caller: AiohttpAction, actions: Sequence[AiohttpAction], *args, **kwargs
-    ):
-        _, _ = args, kwargs
+    def handle_results(self, caller: AiohttpAction, actions: Sequence[AiohttpAction]):
+
         if caller.response is None:
             return
-        if not isinstance(caller.result, list):
+        if not isinstance(caller.response_data, list):
             logger.warning(
                 "Tried to append page data to a parent action with no result. url: %s uid: %s",
                 caller.response.real_url,
@@ -174,7 +172,7 @@ class CheckForPages(AiohttpActionCallback):
                 return
 
             if action.response.status == 200:
-                caller.result.extend(action.result)
+                caller.response_data.extend(action.response_data)
                 return
             logger.warning(
                 (
@@ -187,25 +185,32 @@ class CheckForPages(AiohttpActionCallback):
             )
 
     def worker_count(
-        self, caller: AiohttpAction, actions: Sequence[AiohttpAction], *args, **kwargs
+        self, caller: AiohttpAction, actions: Sequence[AiohttpAction]
     ) -> int:
-        _, _, _, _ = caller, actions, args, kwargs
+        _, _ = caller, actions
         return 5
 
 
-class SaveResultToFile(AiohttpActionCallback):
+class SaveResultToTxtFile(AiohttpActionCallback):
     """Usually used after ResponseToText callback"""
 
     def __init__(
         self,
-        file_path: Path,
+        file_path: Optional[Path] = None,
         mode: str = "w",
+        file_path_template: Optional[str] = None,
         path_values: Optional[Dict[str, str]] = None,
-        file_ending: str = "",
+        file_ending: Optional[str] = ".txt",
     ) -> None:
         super().__init__()
-        self.file_path = Path(file_path)
+        if file_path is None and file_path_template is None:
+            raise ValueError(
+                "Got None for both file_path and file_path_template. "
+                "Must have atleast one of those!"
+            )
+        self.file_path = file_path
         self.mode = mode
+        self.file_path_template = file_path_template
         self.path_values = optional_object(path_values, dict)
         self.file_ending = file_ending
 
@@ -213,71 +218,98 @@ class SaveResultToFile(AiohttpActionCallback):
         return (
             f"{self.__class__.__name__}("
             f"file_path={self.file_path!r}, mode={self.mode!r}, "
+            f"file_path_template={self.file_path_template!r}, "
             f"path_values={self.path_values!r}, file_ending={self.file_ending!r}, "
             ")"
         )
 
-    def refine_path(self, caller: AiohttpAction, *args, **kwargs):
+    def refine_path(self, caller: AiohttpAction):
         """Refine the file path. Data from the AiohttpAction is available for use here."""
-        _, _, _ = caller, args, kwargs
-        if self.path_values is not None:
-            template = Template(str(self.file_path))
-            resolved_string = template.substitute(self.path_values)
+        _ = caller
+        if self.file_path_template is not None:
+            template = Template(str(self.file_path_template))
+            resolved_string = template.safe_substitute(self.path_values)
             self.file_path = Path(resolved_string)
-        if self.file_ending != "":
-            if self.file_path.suffix != self.file_ending:
-                self.file_path = self.file_path.with_suffix(self.file_ending)
+        if self.file_ending is not None:
+            assert self.file_path is not None
+            self.file_path = self.file_path.with_suffix(self.file_ending)
 
-    def get_data(self, caller: AiohttpAction, *args, **kwargs) -> str:
-        """expects caller.result to be a string."""
-        _ = args
-        _ = kwargs
-        data = caller.result
+    def get_data(self, caller: AiohttpAction) -> str:
+        """expects caller.response_data to be a string."""
+
+        data = caller.response_data
         return data
 
-    async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
-        self.refine_path(caller, *args, **kwargs)
+    async def do_callback(self, caller: AiohttpAction):
+        self.refine_path(caller)
         try:
+            assert self.file_path is not None
             self.file_path.parent.mkdir(parents=True, exist_ok=True)
             async with aiofiles.open(
                 str(self.file_path), mode=self.mode
             ) as file:  # type:ignore
-                data = self.get_data(caller, args, kwargs)
+                data = self.get_data(caller)
                 await file.write(data)
-                self.callback_success(caller)
+                self.success(caller)
         except Exception as ex:
-            logger.exception(
-                "Exception saving file to %s in action %s", self.file_path, caller
-            )
-            self.callback_fail(caller, f"Exception saving file to {self.file_path}")
+            logger.exception("Exception saving file with %r in action %s", self, caller)
+            self.fail(caller, f"Exception saving file to {self.file_path}")
             raise ex
 
 
-class SaveJsonResultToFile(SaveResultToFile):
+class SaveResultToJsonFile(SaveResultToTxtFile):
     """Usually used after ResponseToJson callback."""
 
     def __init__(
         self,
         file_path: Path,
         mode: str = "w",
+        file_path_template: Optional[str] = None,
         path_values: Optional[Dict[str, str]] = None,
         file_ending: str = ".json",
     ) -> None:
         super().__init__(
-            file_path,
+            file_path=file_path,
             mode=mode,
+            file_path_template=file_path_template,
             path_values=path_values,
             file_ending=file_ending,
         )
 
-    def get_data(self, caller: AiohttpAction, *args, **kwargs) -> str:
+    def get_data(self, caller: AiohttpAction) -> str:
         """expects data (caller.result in super) to be json."""
-        data = super().get_data(caller, *args, **kwargs)
+        data = super().get_data(caller)
         json_data = json.dumps(data, indent=2)
         return json_data
 
 
-class SaveListOfDictResultToCSVFile(SaveResultToFile):
+class SaveResultToYamlFile(SaveResultToTxtFile):
+    """Usually used after ResponseToJson callback."""
+
+    def __init__(
+        self,
+        file_path: Path,
+        mode: str = "w",
+        file_path_template: Optional[str] = None,
+        path_values: Optional[Dict[str, str]] = None,
+        file_ending: str = ".yaml",
+    ) -> None:
+        super().__init__(
+            file_path=file_path,
+            mode=mode,
+            file_path_template=file_path_template,
+            path_values=path_values,
+            file_ending=file_ending,
+        )
+
+    def get_data(self, caller: AiohttpAction) -> str:
+        """expects data (caller.result in super) to be json."""
+        data = super().get_data(caller)
+        yaml_data = yaml.dump(data, sort_keys=False)
+        return yaml_data
+
+
+class SaveListOfDictResultToCSVFile(SaveResultToTxtFile):
     """Save the result to a CSV file.
 
     Expects the result to be a List[Dict].
@@ -287,14 +319,16 @@ class SaveListOfDictResultToCSVFile(SaveResultToFile):
         self,
         file_path: Path,
         mode: str = "w",
+        file_path_template: Optional[str] = None,
         path_values: Optional[Dict[str, str]] = None,
         file_ending: str = ".csv",
         field_names: Optional[List[str]] = None,
         additional_fields: Dict = None,
     ) -> None:
         super().__init__(
-            file_path,
+            file_path=file_path,
             mode=mode,
+            file_path_template=file_path_template,
             path_values=path_values,
             file_ending=file_ending,
         )
@@ -305,19 +339,16 @@ class SaveListOfDictResultToCSVFile(SaveResultToFile):
         return (
             f"{self.__class__.__name__}("
             f"file_path={self.file_path!r}, mode={self.mode!r}, "
+            f"file_path_template={self.file_path_template!r}, "
             f"path_values={self.path_values!r}, file_ending={self.file_ending!r}, "
             f"field_names={self.field_names!r}, additional_fields={self.additional_fields!r}, "
             ")"
         )
 
-    # def refine_path(self, caller: AiohttpAction, *args, **kwargs):
-    #     """Refine the file path. Data from the AiohttpAction is available for use here."""
-    #     # pass
-
-    def get_data(self, caller: AiohttpAction, *args, **kwargs) -> List[Dict]:  # type: ignore
+    def get_data(self, caller: AiohttpAction) -> List[Dict]:  # type: ignore
         """expects caller.result to be a List[Dict]."""
-        _, _ = args, kwargs
-        data = caller.result
+
+        data = caller.response_data
         if self.additional_fields is not None:
             combined_data = []
             for item in data:
@@ -327,11 +358,12 @@ class SaveListOfDictResultToCSVFile(SaveResultToFile):
             return combined_data
         return data
 
-    async def do_callback(self, caller: AiohttpAction, *args, **kwargs):
-        self.refine_path(caller, *args, **kwargs)
+    async def do_callback(self, caller: AiohttpAction):
+        self.refine_path(caller)
         try:
+            assert self.file_path is not None
             self.file_path.parent.mkdir(parents=True, exist_ok=True)
-            data = self.get_data(caller, args, kwargs)
+            data = self.get_data(caller)
             if self.field_names is None:
                 first, data_iter = spy(data)
                 self.field_names = list(first[0].keys())
@@ -341,10 +373,8 @@ class SaveListOfDictResultToCSVFile(SaveResultToFile):
                 writer.writeheader()
                 for item in data:
                     writer.writerow(item)
-            self.callback_success(caller)
+            self.success(caller)
         except Exception as ex:
-            logger.exception(
-                "Exception saving file to %s in action %s", self.file_path, caller
-            )
-            self.callback_fail(caller, f"Exception saving file to {self.file_path}")
+            logger.exception("Exception saving file with %r in action %s", self, caller)
+            self.fail(caller, f"Exception saving file to {self.file_path}")
             raise ex

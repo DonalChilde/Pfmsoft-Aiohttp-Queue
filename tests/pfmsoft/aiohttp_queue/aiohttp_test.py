@@ -1,64 +1,53 @@
-import asyncio
 import json
-import logging
-import random
-import time
-from asyncio.queues import Queue
 from pathlib import Path
-from time import perf_counter_ns
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Dict
 
-import pytest
-from aiohttp.client import ClientSession
-from rich import inspect
 from tests.pfmsoft.aiohttp_queue import action_builders
 
-from pfmsoft.aiohttp_queue import ActionCallbacks, AiohttpAction, AiohttpQueueWorker
-from pfmsoft.aiohttp_queue.callbacks import ResponseContentToJson
-from pfmsoft.aiohttp_queue.runners import do_action_runner, do_queue_runner
+from pfmsoft.aiohttp_queue.runners import do_action_runner
 
-# from rich import inspect, print
+# pylint: disable=unsubscriptable-object
 
 
-def test_action_repr():
+def test_action_repr(logger):
     params = {"arg1": "argument 1", "arg2": "argument 2"}
-    test_action = action_builders.get_with_response_json(params)
-    action = test_action.action
+    action = action_builders.get_with_response_json(params)
     print(action.__repr__())
     print(action)
     assert "params" in action.__repr__()
     # assert False
 
 
-def test_response_to_json():
+def test_response_to_json(logger):
     params = {"arg1": "argument 1", "arg2": "argument 2"}
-    test_action = action_builders.get_with_response_json(params)
-    action = test_action.action
+    action = action_builders.get_with_response_json(params)
+
     do_action_runner(actions=[action])
     assert action.response.status == 200
-    response_meta = action.response_meta_to_json()
-    assert action.url in response_meta["request_info"]["url"]
-    assert action.result["args"] == test_action.context["params"]
+    response_meta = action.response_meta_to_dict()
+    assert action.aiohttp_args.url in response_meta["request_info"]["url"]
+    data: Dict = action.response_data
+    assert data["args"] == action.context["params"]
 
 
-def test_response_to_string():
+def test_response_to_string(logger):
     params = {"arg1": "argument 1", "arg2": "argument 2"}
-    test_action = action_builders.get_with_response_text(params)
-    action = test_action.action
+    action = action_builders.get_with_response_text(params)
     do_action_runner(actions=[action])
     assert action.response.status == 200
-    response_meta = action.response_meta_to_json()
-    assert action.url in response_meta["request_info"]["url"]
-    assert test_action.context["params"]["arg1"] in action.result
-    json_result = json.loads(action.result)
-    assert json_result["args"] == test_action.context["params"]
+    response_meta = action.response_meta_to_dict()
+    assert action.aiohttp_args.url in response_meta["request_info"]["url"]
+    data_string: str = action.response_data
+    # pylint: disable=unsupported-membership-test
+    assert action.context["params"]["arg1"] in data_string
+    json_result = json.loads(action.response_data)
+    assert json_result["args"] == action.context["params"]
 
 
-def test_text_result_to_file(test_app_data_dir):
+def test_text_result_to_file(test_app_data_dir, logger):
     file_path: Path = test_app_data_dir / Path("text_result_to_file.txt")
     params = {"arg1": "argument 1", "arg2": "argument 2"}
-    test_action = action_builders.save_txt_to_file(params, file_path)
-    action = test_action.action
+    action = action_builders.save_txt_to_file(params, file_path)
     do_action_runner(actions=[action])
     assert action.response.status == 200
     print(file_path)
@@ -66,28 +55,27 @@ def test_text_result_to_file(test_app_data_dir):
     assert file_path.stat().st_size > 10
 
 
-def test_list_of_dicts_result():
+def test_list_of_dicts_result(logger):
     url_params = {"region_id": 10000002}
     params = {"type_id": 34}
-    test_action = action_builders.get_list_of_dicts_result(
+    action = action_builders.get_list_of_dicts_result(
         url_params=url_params, params=params
     )
-    action = test_action.action
+
     do_action_runner(actions=[action])
     assert action.response.status == 200
-    assert isinstance(action.result, list)
-    assert isinstance(action.result[0], dict)
+    assert isinstance(action.response_data, list)
+    assert isinstance(action.response_data[0], dict)
 
 
-def test_save_list_of_dicts_to_csv(test_app_data_dir):
+def test_save_list_of_dicts_to_csv(test_app_data_dir, logger):
     # TODO verify all elements are output to csv, eg. json count == csv count
     url_params = {"region_id": 10000002}
     params = {"type_id": 34}
     file_path: Path = test_app_data_dir / Path("test_save_list_of_dicts_to_csv.csv")
-    test_action = action_builders.save_list_of_dicts_to_csv_file(
+    action = action_builders.save_list_of_dicts_to_csv_file(
         url_params=url_params, params=params, file_path=file_path
     )
-    action = test_action.action
     do_action_runner(actions=[action])
     assert action.response.status == 200
     print(file_path)
@@ -95,11 +83,10 @@ def test_save_list_of_dicts_to_csv(test_app_data_dir):
     assert file_path.stat().st_size > 10
 
 
-def test_save_json_to_file(test_app_data_dir):
+def test_save_json_to_file(test_app_data_dir, logger):
     file_path: Path = test_app_data_dir / Path("test_save_json_to_file.json")
     params = {"arg1": "argument 1", "arg2": "argument 2"}
-    test_action = action_builders.save_json_to_file(params, file_path)
-    action = test_action.action
+    action = action_builders.save_json_to_file(params, file_path)
     do_action_runner(actions=[action])
     assert action.response.status == 200
     print(file_path)
@@ -107,7 +94,7 @@ def test_save_json_to_file(test_app_data_dir):
     assert file_path.stat().st_size > 10
     with open(file_path) as file:
         data = json.load(file)
-        assert data == action.result
+        assert data == action.response_data
 
 
 # from eve_esi_jobs.pfmsoft.util.async_actions.aiohttp import (
