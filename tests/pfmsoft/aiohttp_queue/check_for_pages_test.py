@@ -1,3 +1,4 @@
+from string import Template
 from typing import Dict
 
 import pytest
@@ -5,42 +6,53 @@ import yaml
 from aiohttp import ClientSession
 from rich import inspect
 
-from pfmsoft.aiohttp_queue import ActionCallbacks, AiohttpAction, AiohttpQueueWorker
+from pfmsoft.aiohttp_queue import (
+    ActionCallbacks,
+    AiohttpAction,
+    AiohttpQueueWorker,
+    AiohttpRequest,
+)
 from pfmsoft.aiohttp_queue import callbacks as AC
 from pfmsoft.aiohttp_queue.runners import do_action_runner, do_queue_runner
 
 
 def action_with_pages() -> AiohttpAction:
-    method = "get"
     url_template = "https://esi.evetech.net/latest/contracts/public/${region_id}"
     url_paramters = {"region_id": 10000002}
+    template = Template(url_template)
+    params: Dict = {"page": 1}
+    aiohttp_request = AiohttpRequest(
+        method="get",
+        url=template.substitute(url_paramters),
+        params=params,
+    )
+
     context: Dict = {}
-    request_kwargs: Dict = {"params": {"page": 1}}
+
     callbacks = ActionCallbacks(success=[AC.ResponseContentToJson()])
     action = AiohttpAction(
-        method=method,
-        url_template=url_template,
-        url_parameters=url_paramters,
+        aiohttp_args=aiohttp_request,
         context=context,
-        request_kwargs=request_kwargs,
         callbacks=callbacks,
     )
     return action
 
 
 def action_with_out_pages() -> AiohttpAction:
-    method = "get"
     url_template = "https://esi.evetech.net/latest/markets/${region_id}/history"
     url_paramters = {"region_id": 10000002}
+    template = Template(url_template)
+    params: Dict = {"page": 1, "type_id": 34}
+    aiohttp_request = AiohttpRequest(
+        method="get",
+        url=template.substitute(url_paramters),
+        params=params,
+    )
     context: Dict = {}
-    request_kwargs: Dict = {"params": {"page": 1, "type_id": 34}}
     callbacks = ActionCallbacks(success=[AC.ResponseContentToJson()])
     action = AiohttpAction(
-        method=method,
-        url_template=url_template,
-        url_parameters=url_paramters,
+        aiohttp_args=aiohttp_request,
         context=context,
-        request_kwargs=request_kwargs,
         callbacks=callbacks,
     )
     return action
@@ -50,7 +62,7 @@ def action_with_out_pages() -> AiohttpAction:
 def completed_action_with_out_pages_():
     action = action_with_out_pages()
     do_action_runner([action])
-    assert len(action.result) > 5
+    assert len(action.response_data) > 5
     return action
 
 
@@ -58,18 +70,18 @@ def completed_action_with_out_pages_():
 def completed_action_with_pages_():
     action = action_with_pages()
     do_action_runner([action])
-    assert len(action.result) > 5
+    assert len(action.response_data) > 5
     return action
 
 
 def test_completed_action_pages(completed_action_with_pages):
-    action = completed_action_with_pages
-    assert len(action.result) > 5
+    action: AiohttpAction = completed_action_with_pages
+    assert len(action.response_data) > 5
 
 
 def test_completed_action_no_pages(completed_action_with_out_pages):
-    action = completed_action_with_out_pages
-    assert len(action.result) > 5
+    action: AiohttpAction = completed_action_with_out_pages
+    assert len(action.response_data) > 5
 
 
 def test_check_for_pages(
@@ -79,7 +91,7 @@ def test_check_for_pages(
     callback = AC.CheckForPages()
     with_pages = completed_action_with_pages
     with_out_pages = completed_action_with_out_pages
-    print(yaml.dump(with_pages.response_meta_to_json()))
+    print(yaml.dump(with_pages.response_meta_to_dict()))
     assert with_pages.response is not None
     assert with_out_pages.response is not None
     assert with_pages.response.headers.get("x-pages", None) is not None
@@ -97,19 +109,17 @@ def test_make_new_action(completed_action_with_pages):
     assert pages >= 2
     new_action = callback.make_new_action(action, 2)
     do_action_runner([new_action])
-    assert len(new_action.result) > 1
-    # print(yaml.dump(new_action.result))
-    # assert False
-    assert new_action.name == str(action.uid)
-    assert new_action.id_ == 2
+    assert len(new_action.response_data) > 1
+    assert str(action.uid) in new_action.name
+    assert new_action.id_ == "2"
 
 
 def test_get_all_pages(logger):
     action = action_with_pages()
     action.callbacks.success.append(AC.CheckForPages())
     do_action_runner([action])
-    assert len(action.result) > 5
-    print(len(action.result))
+    assert len(action.response_data) > 5
+    print(len(action.response_data))
     print(yaml.dump(action.context["pfmsoft_page_report"]))
     # print(action.context["pfmsoft_page_report"])
     pages = AC.CheckForPages().check_for_pages(action)

@@ -20,8 +20,7 @@ def test_new_workers(logger, caplog):
     actions: List[AiohttpAction] = []
     workers = [AiohttpQueueWorker(), AiohttpQueueWorker()]
     params = {"arg1": "argument 1", "arg2": "argument 2"}
-    test_action = action_builders.get_with_response_json(params)
-    action = test_action.action
+    action = action_builders.get_with_response_json(params)
     actions.append(action)
     do_queue_runner(actions, workers)
     for action in actions:
@@ -29,7 +28,7 @@ def test_new_workers(logger, caplog):
     # assert False
 
 
-def build_get_json_actions(count: int) -> Sequence[action_builders.TestAction]:
+def build_get_json_actions(count: int) -> Sequence[AiohttpAction]:
     test_actions = []
     for _ in range(count):
         params = {"arg1": random.randint(1, 1000), "arg2": random.randint(1, 1000)}
@@ -43,7 +42,7 @@ def build_get_json_delay_actions(count: int, max_delay: int):
     for _ in range(count):
         params = {"arg1": random.randint(1, 1000), "arg2": random.randint(1, 1000)}
         test_action = action_builders.get_with_response_json_delay(params, max_delay)
-        test_action.action.observers.append(ActionObserver())
+        test_action.observers.append(ActionObserver())
         test_actions.append(test_action)
     return test_actions
 
@@ -53,7 +52,7 @@ def build_get_500_json_actions(count: int):
     for _ in range(count):
         params = {"arg1": random.randint(1, 1000), "arg2": random.randint(1, 1000)}
         test_action = action_builders.get_with_500_code(params)
-        test_action.action.observers.append(ActionObserver())
+        test_action.observers.append(ActionObserver())
         test_actions.append(test_action)
     return test_actions
 
@@ -61,13 +60,13 @@ def build_get_500_json_actions(count: int):
 def test_10_actions(caplog):
     caplog.set_level(logging.INFO)
     test_actions = build_get_json_actions(10)
-    actions: List[AiohttpAction] = [item.action for item in test_actions]
+
     worker_count = 5
     workers = []
     for _ in range(worker_count):
         workers.append(AiohttpQueueWorker())
-    do_queue_runner(actions, workers)
-    for action in actions:
+    do_queue_runner(test_actions, workers)
+    for action in test_actions:
         assert action.state == ActionState.SUCCESS
 
     # assert False
@@ -76,13 +75,13 @@ def test_10_actions(caplog):
 def test_10_actions_delay(caplog):
     caplog.set_level(logging.INFO)
     test_actions = build_get_json_delay_actions(10, 3)
-    actions: List[AiohttpAction] = [item.action for item in test_actions]
+
     worker_count = 5
     workers = []
     for _ in range(worker_count):
         workers.append(AiohttpQueueWorker())
-    do_queue_runner(actions, workers)
-    for action in actions:
+    do_queue_runner(test_actions, workers)
+    for action in test_actions:
         assert action.state == ActionState.SUCCESS
     # assert False
 
@@ -90,12 +89,12 @@ def test_10_actions_delay(caplog):
 def test_500(caplog):
     caplog.set_level(logging.INFO)
     test_actions = build_get_500_json_actions(1)
-    actions: List[AiohttpAction] = [item.action for item in test_actions]
+
     worker_count = 2
     workers = []
     for _ in range(worker_count):
         workers.append(AiohttpQueueWorker())
-    do_queue_runner(actions, workers)
-    for action in actions:
+    do_queue_runner(test_actions, workers)
+    for action in test_actions:
         assert action.state == ActionState.FAIL
     # assert False

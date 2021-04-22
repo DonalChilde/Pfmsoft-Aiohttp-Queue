@@ -150,7 +150,6 @@ def save_txt_to_file(
     params: Dict[str, str],
     file_path: Path,
     path_values: Optional[Dict] = None,
-    file_ending: str = "",
 ) -> AiohttpAction:
 
     test_action = get_with_response_text(params)
@@ -158,7 +157,6 @@ def save_txt_to_file(
         AQ_callbacks.SaveResultToTxtFile(
             file_path=file_path,
             path_values=path_values,
-            file_ending=file_ending,
         )
     )
     return test_action

@@ -7,6 +7,7 @@ from pfmsoft.aiohttp_queue.aiohttp import (
     AiohttpAction,
     AiohttpActionCallback,
     AiohttpQueueWorker,
+    AiohttpRequest,
 )
 
 __author__ = """Chad Lowe"""

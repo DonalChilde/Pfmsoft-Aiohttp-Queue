@@ -132,7 +132,8 @@ class CheckForPages(AiohttpActionCallback):
         new_action = AiohttpAction(
             aiohttp_args=new_args,
             max_attempts=caller.max_attempts,
-            id_=f"{caller.uid} - page: {new_page}",
+            name=f"{caller.uid} - page: {new_page}",
+            id_=str(new_page),
             callbacks=ActionCallbacks(success=[ResponseContentToJson()]),
             observers=caller.observers,
             retry_codes=caller.retry_codes,
@@ -226,6 +227,7 @@ class SaveResultToTxtFile(AiohttpActionCallback):
     def refine_path(self, caller: AiohttpAction):
         """Refine the file path. Data from the AiohttpAction is available for use here."""
         _ = caller
+        print(repr(self))
         if self.file_path_template is not None:
             template = Template(str(self.file_path_template))
             resolved_string = template.safe_substitute(self.path_values)
@@ -233,6 +235,7 @@ class SaveResultToTxtFile(AiohttpActionCallback):
         if self.file_ending is not None:
             assert self.file_path is not None
             self.file_path = self.file_path.with_suffix(self.file_ending)
+        print(repr(self))
 
     def get_data(self, caller: AiohttpAction) -> str:
         """expects caller.response_data to be a string."""
