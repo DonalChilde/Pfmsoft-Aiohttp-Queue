@@ -2,6 +2,15 @@
 
 ## Before next release
 
+- New AiohttpAction interface
+  - test
+  - translate callbacks
+- CHANGE option to Use safe_substitute for template paths? https://docs.python.org/3/library/string.html#template-strings
+- CHANGE add repr of context to fail logging
+- FIX add observers to action init
+- CHANGE catch callback exceptions, and fail callbacks in the success, retry, fail maethods.
+  - if a callback does not want to have callbackstate.fail on exception, it should catch them inside.
+
 ## testing
 
 - make a list of actions to fill queue
