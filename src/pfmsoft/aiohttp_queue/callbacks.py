@@ -31,7 +31,11 @@ class ResponseContentToJson(AiohttpActionCallback):
         super().__init__()
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}()"
+        return (
+            f"{self.__class__.__name__}("
+            f"state={self.state!r}, state_message={self.state_message!r}"
+            ")"
+        )
 
     async def do_callback(self, caller: AiohttpAction):
         if caller.response is not None:
@@ -46,7 +50,11 @@ class ResponseContentToText(AiohttpActionCallback):
         super().__init__()
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}()"
+        return (
+            f"{self.__class__.__name__}("
+            f"state={self.state!r}, state_message={self.state_message!r}"
+            ")"
+        )
 
     async def do_callback(self, caller: AiohttpAction):
         if caller.response is not None:
@@ -66,7 +74,11 @@ class CheckForPages(AiohttpActionCallback):
         super().__init__()
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}()"
+        return (
+            f"{self.__class__.__name__}("
+            f"state={self.state!r}, state_message={self.state_message!r}"
+            ")"
+        )
 
     async def do_callback(self, caller: AiohttpAction):
         """"""
@@ -218,6 +230,7 @@ class SaveResultToTxtFile(AiohttpActionCallback):
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}("
+            f"state={self.state!r}, state_message={self.state_message!r}, "
             f"file_path={self.file_path!r}, mode={self.mode!r}, "
             f"file_path_template={self.file_path_template!r}, "
             f"path_values={self.path_values!r}, file_ending={self.file_ending!r}, "
@@ -341,6 +354,7 @@ class SaveListOfDictResultToCSVFile(SaveResultToTxtFile):
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}("
+            f"state={self.state!r}, state_message={self.state_message!r}, "
             f"file_path={self.file_path!r}, mode={self.mode!r}, "
             f"file_path_template={self.file_path_template!r}, "
             f"path_values={self.path_values!r}, file_ending={self.file_ending!r}, "

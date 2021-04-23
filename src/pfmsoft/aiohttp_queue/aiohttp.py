@@ -2,8 +2,7 @@ import logging
 from asyncio.queues import Queue
 from dataclasses import dataclass, field
 from enum import Enum
-from string import Template
-from typing import Any, Dict, List, Literal, Mapping, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
 from aiohttp import ClientResponse, ClientSession
@@ -55,6 +54,13 @@ class AiohttpQueueWorker:
                 )
             queue.task_done()
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"uid={self.uid!r}, task_count={self.task_count!r}"
+            ")"
+        )
+
 
 class CallbackState(Enum):
     NOT_SET = "not_set"
@@ -82,6 +88,13 @@ class AiohttpActionCallback:
     async def do_callback(self, caller: "AiohttpAction"):
         raise NotImplementedError()
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"state={self.state!r}, state_message={self.state_message!r}"
+            ")"
+        )
+
 
 class ActionObserver:
     def __init__(self) -> None:
@@ -96,6 +109,9 @@ class ActionObserver:
     ):
         _ = kwargs
         print(action, source, msg)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(" ")"
 
 
 @dataclass
@@ -143,7 +159,12 @@ class AiohttpAction:
         return (
             f"{self.__class__.__name__}("
             f"name={self.name!r}, id_={self.id_!r}, uid={self.uid!r}, "
-            f"aiohttp_args={self.aiohttp_args!r}"
+            f"aiohttp_args={self.aiohttp_args!r}, max_attempts={self.max_attempts!r}, "
+            f"context={self.context!r}, observers={self.observers!r}, "
+            f"callbacks={self.callbacks!r}, retry_codes={self.retry_codes!r}, "
+            f"attempts={self.attempts!r}, response={self.response!r}, "
+            f"response_data={self.response_data!r}, state={self.state}"
+            ")"
         )
 
     def __str__(self) -> str:
@@ -155,7 +176,7 @@ class AiohttpAction:
             reason = None
         return (
             f"{self.__class__.__name__}("
-            f"state={self.state}, "
+            f"state={self.state}, name={self.name}, id_={self.id_}, uid={self.uid}, "
             f"method={self.aiohttp_args.method!r}, url={self.aiohttp_args.url!r}, "
             f"status_code={code!r}, reason={reason!r}"
             ")"
