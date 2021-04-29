@@ -3,30 +3,52 @@ import logging
 from asyncio import Task, create_task, gather
 from asyncio.queues import Queue
 from time import perf_counter_ns
-from typing import Sequence
+from typing import Dict, Optional, Sequence
 
 from aiohttp import ClientSession
 
 from pfmsoft.aiohttp_queue import AiohttpAction, AiohttpQueueWorker
+from pfmsoft.aiohttp_queue.utilities import optional_object
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
-def do_action_runner(
+def do_single_action_runner(
+    action: AiohttpAction,
+    session_kwargs=None,
+):
+    asyncio.run(single_action_runner(action, session_kwargs))
+
+
+async def single_action_runner(
+    action: AiohttpAction, session_kwargs: Optional[Dict] = None
+):
+    start = perf_counter_ns()
+    session_kwargs = optional_object(session_kwargs, dict)
+    async with ClientSession(**session_kwargs) as session:
+        await action.do_action(session)
+    end = perf_counter_ns()
+    seconds = (end - start) / 1000000000
+    logger.info(
+        "Action completed - took %s seconds.",
+        f"{seconds:.2f}",
+    )
+
+
+def do_sequential_action_runner(
     actions: Sequence[AiohttpAction],
     session_kwargs=None,
 ):
-    asyncio.run(action_runner(actions, session_kwargs))
+    asyncio.run(sequential_action_runner(actions, session_kwargs))
 
 
-async def action_runner(
+async def sequential_action_runner(
     actions: Sequence[AiohttpAction],
     session_kwargs=None,
 ):
     start = perf_counter_ns()
-    if session_kwargs is None:
-        session_kwargs = {}
+    session_kwargs = optional_object(session_kwargs, dict)
     async with ClientSession(**session_kwargs) as session:
         for action in actions:
             await action.do_action(session)
@@ -54,8 +76,7 @@ async def queue_runner(
     session_kwargs=None,
 ):
     start = perf_counter_ns()
-    if session_kwargs is None:
-        session_kwargs = {}
+    session_kwargs = optional_object(session_kwargs, dict)
     queue: Queue = Queue()
     async with ClientSession(**session_kwargs) as session:
         worker_tasks = []
