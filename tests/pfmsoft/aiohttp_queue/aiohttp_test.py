@@ -4,7 +4,7 @@ from typing import Dict
 
 from tests.pfmsoft.aiohttp_queue import action_builders
 
-from pfmsoft.aiohttp_queue.runners import do_action_runner
+from pfmsoft.aiohttp_queue.runners import do_single_action_runner
 
 # pylint: disable=unsubscriptable-object
 
@@ -22,7 +22,7 @@ def test_response_to_json(logger):
     params = {"arg1": "argument 1", "arg2": "argument 2"}
     action = action_builders.get_with_response_json(params)
 
-    do_action_runner(actions=[action])
+    do_single_action_runner(action)
     assert action.response.status == 200
     response_meta = action.response_meta_to_dict()
     assert action.aiohttp_args.url in response_meta["request_info"]["url"]
@@ -33,7 +33,7 @@ def test_response_to_json(logger):
 def test_response_to_string(logger):
     params = {"arg1": "argument 1", "arg2": "argument 2"}
     action = action_builders.get_with_response_text(params)
-    do_action_runner(actions=[action])
+    do_single_action_runner(action)
     assert action.response.status == 200
     response_meta = action.response_meta_to_dict()
     assert action.aiohttp_args.url in response_meta["request_info"]["url"]
@@ -48,7 +48,7 @@ def test_text_result_to_file(test_app_data_dir, logger):
     file_path: Path = test_app_data_dir / Path("text_result_to_file.txt")
     params = {"arg1": "argument 1", "arg2": "argument 2"}
     action = action_builders.save_txt_to_file(params, file_path)
-    do_action_runner(actions=[action])
+    do_single_action_runner(action)
     assert action.response.status == 200
     print(file_path)
     assert file_path.is_file()
@@ -62,7 +62,7 @@ def test_list_of_dicts_result(logger):
         url_params=url_params, params=params
     )
 
-    do_action_runner(actions=[action])
+    do_single_action_runner(action)
     assert action.response.status == 200
     assert isinstance(action.response_data, list)
     assert isinstance(action.response_data[0], dict)
@@ -76,7 +76,7 @@ def test_save_list_of_dicts_to_csv(test_app_data_dir, logger):
     action = action_builders.save_list_of_dicts_to_csv_file(
         url_params=url_params, params=params, file_path=file_path
     )
-    do_action_runner(actions=[action])
+    do_single_action_runner(action)
     assert action.response.status == 200
     print(file_path)
     assert file_path.is_file()
@@ -87,7 +87,7 @@ def test_save_json_to_file(test_app_data_dir, logger):
     file_path: Path = test_app_data_dir / Path("test_save_json_to_file.json")
     params = {"arg1": "argument 1", "arg2": "argument 2"}
     action = action_builders.save_json_to_file(params, file_path)
-    do_action_runner(actions=[action])
+    do_single_action_runner(action)
     assert action.response.status == 200
     print(file_path)
     assert file_path.is_file()

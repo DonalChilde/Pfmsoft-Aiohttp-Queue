@@ -13,7 +13,7 @@ from pfmsoft.aiohttp_queue import (
     AiohttpRequest,
 )
 from pfmsoft.aiohttp_queue import callbacks as AC
-from pfmsoft.aiohttp_queue.runners import do_action_runner, do_queue_runner
+from pfmsoft.aiohttp_queue.runners import do_queue_runner, do_single_action_runner
 
 
 def action_with_pages() -> AiohttpAction:
@@ -61,7 +61,7 @@ def action_with_out_pages() -> AiohttpAction:
 @pytest.fixture(scope="module", name="completed_action_with_out_pages")
 def completed_action_with_out_pages_():
     action = action_with_out_pages()
-    do_action_runner([action])
+    do_single_action_runner(action)
     assert len(action.response_data) > 5
     return action
 
@@ -69,7 +69,7 @@ def completed_action_with_out_pages_():
 @pytest.fixture(scope="module", name="completed_action_with_pages")
 def completed_action_with_pages_():
     action = action_with_pages()
-    do_action_runner([action])
+    do_single_action_runner(action)
     assert len(action.response_data) > 5
     return action
 
@@ -108,7 +108,7 @@ def test_make_new_action(completed_action_with_pages):
     pages = callback.check_for_pages(action)
     assert pages >= 2
     new_action = callback.make_new_action(action, 2)
-    do_action_runner([new_action])
+    do_single_action_runner(new_action)
     assert len(new_action.response_data) > 1
     assert str(action.uid) in new_action.name
     assert new_action.id_ == "2"
@@ -117,7 +117,7 @@ def test_make_new_action(completed_action_with_pages):
 def test_get_all_pages(logger):
     action = action_with_pages()
     action.callbacks.success.append(AC.CheckForPages())
-    do_action_runner([action])
+    do_single_action_runner(action)
     assert len(action.response_data) > 5
     print(len(action.response_data))
     print(yaml.dump(action.context["pfmsoft_page_report"]))
