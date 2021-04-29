@@ -2,7 +2,8 @@
 
 ## Before next release
 
-- New AiohttpAction interface
+- CHANGE make do action runner singular, add do_sequential to handle multiple actions no queue.
+- DONE New AiohttpAction interface
   - test
   - translate callbacks
 - CHANGE option to Use safe_substitute for template paths? https://docs.python.org/3/library/string.html#template-strings

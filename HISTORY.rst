@@ -2,10 +2,16 @@
 History
 =======
 
+0.2.1 (2021-04-29)
+------------------
+
+* FIX Make file_path optional for file callbacks.
+* CHANGE Make runners more clear. Single, Sequential, and Queue.
+
 0.2.0 (2021-04-23)
 ------------------
 
-* CHANGE Refactory AiohttpAction to separate more clearly the inputs passed to aiohttp.ClientSession.request.
+* CHANGE Refactor AiohttpAction to separate more clearly the inputs passed to aiohttp.ClientSession.request.
 * ADD AiohttpRequest object to hold request args.
 * ADD yaml file output callback
 * CHANGE file callbacks now have a file_path_template arg that can be evaluated with path_values. If file_path_template exists, it will overwrite file_path after template substitution.

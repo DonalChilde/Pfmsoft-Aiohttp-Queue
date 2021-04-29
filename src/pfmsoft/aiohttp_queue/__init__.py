@@ -12,4 +12,4 @@ from pfmsoft.aiohttp_queue.aiohttp import (
 
 __author__ = """Chad Lowe"""
 __email__ = "pfmsoft@gmail.com"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
